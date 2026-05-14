@@ -88,8 +88,15 @@
     -webkit-backdrop-filter: blur(22px) saturate(180%);
     box-shadow: var(--chip-shadow);
     pointer-events: auto;
-    touch-action: none;
+    touch-action: pan-x;
+    max-width: calc(100vw - 28px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
   }
+  #dock::-webkit-scrollbar { display: none; }
+  .tool { scroll-snap-align: center; }
   .tool {
     flex: 0 0 auto;
     width: 56px;
@@ -133,16 +140,19 @@
   .tool.selected .lbl { color: var(--ink); }
 
   /* Per-tool accent on the glyph (subtle, muted palette) */
-  .tool[data-tool="tree"]   .glyph { color: #4a7a3a; }
-  .tool[data-tool="flower"] .glyph { color: #b85a72; }
-  .tool[data-tool="house"]  .glyph { color: #6a7a96; }
-  .tool[data-tool="water"]  .glyph { color: #4a90b8; }
-  .tool[data-tool="erase"]  .glyph { color: #8a6a4a; }
-  .tool.selected[data-tool="tree"]   .glyph { color: #335728; }
-  .tool.selected[data-tool="flower"] .glyph { color: #8a3e54; }
-  .tool.selected[data-tool="house"]  .glyph { color: #495972; }
-  .tool.selected[data-tool="water"]  .glyph { color: #316d8e; }
-  .tool.selected[data-tool="erase"]  .glyph { color: #634a2f; }
+  .tool[data-tool="tree"]      .glyph { color: #4a7a3a; }
+  .tool[data-tool="bush"]      .glyph { color: #5e8a3e; }
+  .tool[data-tool="flower"]    .glyph { color: #b85a72; }
+  .tool[data-tool="wheat"]     .glyph { color: #c2952e; }
+  .tool[data-tool="sunflower"] .glyph { color: #d8a32a; }
+  .tool[data-tool="pumpkin"]   .glyph { color: #c8682a; }
+  .tool[data-tool="house"]     .glyph { color: #6a7a96; }
+  .tool[data-tool="fence"]     .glyph { color: #8a6a4a; }
+  .tool[data-tool="well"]      .glyph { color: #7c7568; }
+  .tool[data-tool="lantern"]   .glyph { color: #9a8242; }
+  .tool[data-tool="water"]     .glyph { color: #4a90b8; }
+  .tool[data-tool="erase"]     .glyph { color: #8a6a4a; }
+  .tool.selected .glyph { filter: brightness(0.78); }
 
   /* Watermark */
   #watermark {
@@ -299,6 +309,10 @@
         <path d="M6.5 7.8 a5.5 4 0 0 1 11 0 v.2 H6.5z"/>
         <path d="M9 4.3 a3 2.6 0 0 1 6 0 v.2 H9z"/>
       </svg>`,
+      bush: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 17 a6 5 0 0 1 7-5 a4.5 4 0 0 1 8 1 a4 4 0 0 1 3 4 z"/>
+        <ellipse cx="12" cy="20" rx="10" ry="1.6" opacity="0.35"/>
+      </svg>`,
       flower: `<svg viewBox="0 0 24 24" fill="currentColor">
         <ellipse cx="12" cy="17" rx="9" ry="3.2"/>
         <circle cx="6.8" cy="10.5" r="2.4"/>
@@ -306,12 +320,54 @@
         <circle cx="17.2" cy="10.5" r="2.4"/>
         <circle cx="12" cy="9" r="1.1" fill="rgba(255,255,255,0.55)"/>
       </svg>`,
+      wheat: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <rect x="11.4" y="11" width="1.2" height="11" rx="0.3"/>
+        <ellipse cx="12" cy="5" rx="2.4" ry="3.4"/>
+        <ellipse cx="7.5" cy="9" rx="2.4" ry="3.2"/>
+        <ellipse cx="16.5" cy="9" rx="2.4" ry="3.2"/>
+        <ellipse cx="7.5" cy="14" rx="2.4" ry="3.2"/>
+        <ellipse cx="16.5" cy="14" rx="2.4" ry="3.2"/>
+      </svg>`,
+      sunflower: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <rect x="11.4" y="13" width="1.2" height="9" rx="0.3"/>
+        <circle cx="12" cy="9" r="5"/>
+        <circle cx="12" cy="9" r="2.6" fill="rgba(255,255,255,0.35)"/>
+        <ellipse cx="6.5" cy="16" rx="2.6" ry="1.4" opacity="0.55"/>
+      </svg>`,
+      pumpkin: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <ellipse cx="6" cy="16" rx="3.5" ry="4.5"/>
+        <ellipse cx="18" cy="16" rx="3.5" ry="4.5"/>
+        <ellipse cx="12" cy="16" rx="8" ry="5"/>
+        <rect x="11" y="6" width="2" height="5" rx="0.4"/>
+        <path d="M14 8 Q18 7 19 11" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      </svg>`,
       house: `<svg viewBox="0 0 24 24" fill="currentColor">
         <path d="M3 12.5 L12 4 L21 12.5 V13.4 L12 5.4 L3 13.4 Z"/>
         <path d="M4.4 13 L19.6 13 V21.2 H4.4 Z"/>
         <rect x="10.5" y="14.5" width="3" height="6.7" rx="0.3" fill="rgba(255,250,238,0.5)"/>
         <rect x="6" y="14.8" width="3" height="3" rx="0.3" fill="rgba(255,250,238,0.5)"/>
         <rect x="15" y="14.8" width="3" height="3" rx="0.3" fill="rgba(255,250,238,0.5)"/>
+      </svg>`,
+      fence: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <rect x="3" y="13" width="18" height="1.4" rx="0.3"/>
+        <rect x="3" y="17" width="18" height="1.4" rx="0.3"/>
+        <path d="M5 10 L7 8 L9 10 L9 21 L5 21 Z"/>
+        <path d="M11 10 L13 8 L15 10 L15 21 L11 21 Z"/>
+        <path d="M17 10 L19 8 L21 10 L21 21 L17 21 Z" transform="translate(-2,0)"/>
+      </svg>`,
+      well: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <ellipse cx="12" cy="17" rx="8" ry="3.2"/>
+        <ellipse cx="12" cy="14.6" rx="8" ry="3.2" fill="rgba(255,255,255,0.25)"/>
+        <rect x="9" y="6" width="1.6" height="9" rx="0.3"/>
+        <rect x="13.4" y="6" width="1.6" height="9" rx="0.3"/>
+        <path d="M7 5.5 L12 2 L17 5.5 L17 7 L7 7 Z"/>
+      </svg>`,
+      lantern: `<svg viewBox="0 0 24 24" fill="currentColor">
+        <rect x="11" y="14" width="2" height="8" rx="0.3"/>
+        <rect x="9" y="20" width="6" height="1.4" rx="0.3"/>
+        <path d="M8 6 L16 6 L17 10 L17 13 Q17 14.5 15.5 14.5 L8.5 14.5 Q7 14.5 7 13 L7 10 Z"/>
+        <rect x="9" y="9" width="6" height="3.5" rx="0.3" fill="rgba(255,236,160,0.6)"/>
+        <rect x="10.5" y="3" width="3" height="3" rx="0.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
       </svg>`,
       water: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <path d="M3 7.5 Q7 5 12 7.5 T21 7.5"/>
@@ -325,11 +381,18 @@
     };
 
     const TOOLS = [
-      { id: 'tree',   name: 'Tree' },
-      { id: 'flower', name: 'Bloom' },
-      { id: 'house',  name: 'House' },
-      { id: 'water',  name: 'Water' },
-      { id: 'erase',  name: 'Remove' },
+      { id: 'tree',      name: 'Tree' },
+      { id: 'bush',      name: 'Bush' },
+      { id: 'flower',    name: 'Bloom' },
+      { id: 'wheat',     name: 'Wheat' },
+      { id: 'sunflower', name: 'Sun' },
+      { id: 'pumpkin',   name: 'Pump' },
+      { id: 'house',     name: 'House' },
+      { id: 'fence',     name: 'Fence' },
+      { id: 'well',      name: 'Well' },
+      { id: 'lantern',   name: 'Lamp' },
+      { id: 'water',     name: 'Water' },
+      { id: 'erase',     name: 'Remove' },
     ];
 
     // ─────────────────────────────────────────────────────────────
@@ -444,6 +507,10 @@
       ambient.intensity = p.ambI;
       scene.background.setHex(p.bg);
       scene.fog.color.setHex(p.bg);
+      // Lanterns glow brighter at night
+      if (M.lampGlass) {
+        M.lampGlass.emissiveIntensity = 0.25 + (1 - Math.min(1, p.sunI)) * 1.2;
+      }
     }
     applyTod();
 
@@ -584,6 +651,16 @@
 
       bushGreen: new THREE.MeshLambertMaterial({ color: 0x5fab26 }),
       bushDk:    new THREE.MeshLambertMaterial({ color: 0x4a8f1f }),
+      wheatStalk:new THREE.MeshLambertMaterial({ color: 0xb09640 }),
+      wheatHead: new THREE.MeshLambertMaterial({ color: 0xe6c44a }),
+      cornStalk: new THREE.MeshLambertMaterial({ color: 0x5b8e2e }),
+      sunPetal:  new THREE.MeshLambertMaterial({ color: 0xf2b830 }),
+      sunCore:   new THREE.MeshLambertMaterial({ color: 0x5a3a1a }),
+      pumpkin:   new THREE.MeshLambertMaterial({ color: 0xd86c2a }),
+      fenceWood: new THREE.MeshLambertMaterial({ color: 0xb38255 }),
+      fenceWoodD:new THREE.MeshLambertMaterial({ color: 0x7d5630 }),
+      stone:     new THREE.MeshLambertMaterial({ color: 0x9b9a8f }),
+      lampGlass: new THREE.MeshLambertMaterial({ color: 0xffe9a8, emissive: 0xffaa33, emissiveIntensity: 0.55 }),
       petalA:    new THREE.MeshLambertMaterial({ color: 0xff7c9e }),
       petalB:    new THREE.MeshLambertMaterial({ color: 0xffd84a }),
       petalC:    new THREE.MeshLambertMaterial({ color: 0x9b6cf3 }),
@@ -593,6 +670,11 @@
       cowSpot:   new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
       cowMuzzle: new THREE.MeshLambertMaterial({ color: 0xf4c3c0 }),
       hoof:      new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
+      sheepWool: new THREE.MeshLambertMaterial({ color: 0xf2eee3 }),
+      sheepFace: new THREE.MeshLambertMaterial({ color: 0x3a2d22 }),
+      chickenBody: new THREE.MeshLambertMaterial({ color: 0xfefaf0 }),
+      chickenComb: new THREE.MeshLambertMaterial({ color: 0xd84030 }),
+      chickenBeak: new THREE.MeshLambertMaterial({ color: 0xe6a82a }),
 
       smoke:     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }),
     };
@@ -826,6 +908,192 @@
       return g;
     }
 
+    function makeBush(seed) {
+      const rng = srand((seed || 0) * 23 + 7);
+      const g = new THREE.Group();
+      const sizes = [
+        { w: 0.5, h: 0.3, d: 0.5, mat: M.leavesDk, dx: 0,    dz: 0 },
+        { w: 0.38, h: 0.25, d: 0.38, mat: M.leaves,  dx: 0.18, dz: -0.1 },
+        { w: 0.34, h: 0.22, d: 0.34, mat: M.bushGreen, dx: -0.15, dz: 0.12 },
+      ];
+      for (const s of sizes) {
+        const m = new THREE.Mesh(roundedBox(s.w, s.h, s.w, 0.08), s.mat);
+        m.position.set(s.dx, s.h / 2, s.dz);
+        g.add(m);
+      }
+      g.userData = { kind: 'bush', swayPhase: Math.random() * Math.PI * 2, swayAmount: 0.03 };
+      castReceive(g);
+      return g;
+    }
+
+    function makeWheat() {
+      const g = new THREE.Group();
+      const rng = srand(Math.floor(Math.random() * 1e6));
+      // dirt patch
+      const dirt = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.94, 0.04, TILE * 0.94), M.dirtRich);
+      dirt.position.y = 0.02;
+      dirt.receiveShadow = true;
+      g.add(dirt);
+      // stalks
+      for (let i = 0; i < 9; i++) {
+        const h = 0.42 + rng() * 0.18;
+        const stalk = new THREE.Mesh(roundedBox(0.06, h, 0.06, 0.018), M.wheatStalk);
+        stalk.position.set((rng() - 0.5) * 0.7, 0.04 + h / 2, (rng() - 0.5) * 0.7);
+        stalk.rotation.z = (rng() - 0.5) * 0.18;
+        g.add(stalk);
+        const head = new THREE.Mesh(roundedBox(0.1, 0.12, 0.08, 0.025), M.wheatHead);
+        head.position.set(stalk.position.x, 0.04 + h + 0.04, stalk.position.z);
+        head.rotation.z = stalk.rotation.z;
+        g.add(head);
+      }
+      g.userData = { kind: 'wheat', swayPhase: Math.random() * Math.PI * 2, swayAmount: 0.05 };
+      castReceive(g);
+      return g;
+    }
+
+    function makeSunflower() {
+      const g = new THREE.Group();
+      const rng = srand(Math.floor(Math.random() * 1e6));
+      // 2 stalks per tile
+      for (let i = 0; i < 2; i++) {
+        const ang = i * Math.PI + rng() * 0.6;
+        const cx = Math.cos(ang) * 0.18;
+        const cz = Math.sin(ang) * 0.18;
+        const h = 0.78 + rng() * 0.18;
+        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.08, h, 0.08), M.cornStalk);
+        stem.position.set(cx, h / 2, cz);
+        g.add(stem);
+        // leaves
+        const leafL = new THREE.Mesh(roundedBox(0.18, 0.05, 0.1, 0.03), M.cornStalk);
+        leafL.position.set(cx + 0.12, h * 0.55, cz);
+        g.add(leafL);
+        const leafR = leafL.clone();
+        leafR.position.set(cx - 0.12, h * 0.4, cz);
+        g.add(leafR);
+        // disc head
+        const disc = new THREE.Mesh(roundedBox(0.32, 0.06, 0.32, 0.08), M.sunPetal);
+        disc.position.set(cx, h + 0.04, cz);
+        g.add(disc);
+        const core = new THREE.Mesh(roundedBox(0.18, 0.07, 0.18, 0.05), M.sunCore);
+        core.position.set(cx, h + 0.07, cz);
+        g.add(core);
+      }
+      g.userData = { kind: 'sunflower', swayPhase: Math.random() * Math.PI * 2, swayAmount: 0.05 };
+      castReceive(g);
+      return g;
+    }
+
+    function makePumpkin() {
+      const g = new THREE.Group();
+      const rng = srand(Math.floor(Math.random() * 1e6));
+      // dirt patch
+      const dirt = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.94, 0.04, TILE * 0.94), M.dirtRich);
+      dirt.position.y = 0.02;
+      dirt.receiveShadow = true;
+      g.add(dirt);
+      // 3 pumpkins
+      const positions = [[0.18, 0, -0.18], [-0.2, 0, 0.05], [0.05, 0, 0.2]];
+      for (const [x, , z] of positions) {
+        const sz = 0.22 + rng() * 0.08;
+        const body = new THREE.Mesh(roundedBox(sz, sz * 0.78, sz, 0.05), M.pumpkin);
+        body.position.set(x, 0.04 + sz * 0.39, z);
+        g.add(body);
+        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.04), M.cornStalk);
+        stem.position.set(x, 0.04 + sz * 0.78 + 0.02, z);
+        g.add(stem);
+      }
+      g.userData = { kind: 'pumpkin', swayPhase: 0, swayAmount: 0 };
+      castReceive(g);
+      return g;
+    }
+
+    function makeFence() {
+      const g = new THREE.Group();
+      // 3 posts + 2 rails
+      const postW = 0.07;
+      const postH = 0.32;
+      const positions = [-0.4, 0, 0.4];
+      for (const x of positions) {
+        const post = new THREE.Mesh(roundedBox(postW, postH, postW, 0.02), M.fenceWood);
+        post.position.set(x, postH / 2, 0);
+        g.add(post);
+        const cap = new THREE.Mesh(roundedBox(postW * 1.3, 0.05, postW * 1.3, 0.015), M.fenceWoodD);
+        cap.position.set(x, postH + 0.02, 0);
+        g.add(cap);
+      }
+      // top rail
+      const topRail = new THREE.Mesh(roundedBox(0.86, 0.05, 0.06, 0.015), M.fenceWood);
+      topRail.position.y = 0.26;
+      g.add(topRail);
+      // mid rail
+      const midRail = new THREE.Mesh(roundedBox(0.86, 0.05, 0.06, 0.015), M.fenceWoodD);
+      midRail.position.y = 0.14;
+      g.add(midRail);
+      g.userData = { kind: 'fence' };
+      castReceive(g);
+      return g;
+    }
+
+    function makeWell() {
+      const g = new THREE.Group();
+      // base ring (stones)
+      const base = new THREE.Mesh(roundedBox(0.62, 0.32, 0.62, 0.08), M.stone);
+      base.position.y = 0.16;
+      g.add(base);
+      // dark inset (water)
+      const water = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.42), M.waterDk);
+      water.position.y = 0.305;
+      g.add(water);
+      // posts
+      const postH = 0.5;
+      const post1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, postH, 0.06), M.fenceWood);
+      post1.position.set(-0.25, 0.32 + postH / 2, 0);
+      g.add(post1);
+      const post2 = post1.clone();
+      post2.position.x = 0.25;
+      g.add(post2);
+      // roof
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.5), M.roofRed);
+      roof.position.y = 0.32 + postH + 0.04;
+      g.add(roof);
+      const roofTop = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.3), M.roofRed);
+      roofTop.position.y = 0.32 + postH + 0.11;
+      g.add(roofTop);
+      // bucket
+      const bucket = new THREE.Mesh(roundedBox(0.12, 0.1, 0.12, 0.02), M.fenceWoodD);
+      bucket.position.set(0, 0.32 + postH * 0.6, 0);
+      g.add(bucket);
+      g.userData = { kind: 'well' };
+      castReceive(g);
+      return g;
+    }
+
+    function makeLantern() {
+      const g = new THREE.Group();
+      // base block
+      const base = new THREE.Mesh(roundedBox(0.18, 0.06, 0.18, 0.03), M.stone);
+      base.position.y = 0.03;
+      g.add(base);
+      // post
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.6, 0.06), M.fenceWoodD);
+      post.position.y = 0.36;
+      g.add(post);
+      // top arm
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.14), M.fenceWoodD);
+      arm.position.set(0, 0.66, 0.05);
+      g.add(arm);
+      // lantern box (glowing)
+      const lamp = new THREE.Mesh(roundedBox(0.18, 0.2, 0.18, 0.04), M.lampGlass);
+      lamp.position.set(0, 0.56, 0.05);
+      g.add(lamp);
+      const cap = new THREE.Mesh(roundedBox(0.22, 0.05, 0.22, 0.03), M.fenceWoodD);
+      cap.position.set(0, 0.69, 0.05);
+      g.add(cap);
+      g.userData = { kind: 'lantern' };
+      castReceive(g);
+      return g;
+    }
+
     function makeWaterCap() {
       // Replaces the grass top of a tile with water; we put a low slab on top
       const g = new THREE.Group();
@@ -848,10 +1116,17 @@
     }
 
     function makeSprite(kind, level, seed) {
-      if (kind === 'tree')   return makeTree(level);
-      if (kind === 'flower') return makeFlowerPatch(seed);
-      if (kind === 'house')  return makeHouse(level);
-      if (kind === 'water')  return makeWaterCap();
+      if (kind === 'tree')      return makeTree(level);
+      if (kind === 'bush')      return makeBush(seed);
+      if (kind === 'flower')    return makeFlowerPatch(seed);
+      if (kind === 'wheat')     return makeWheat();
+      if (kind === 'sunflower') return makeSunflower();
+      if (kind === 'pumpkin')   return makePumpkin();
+      if (kind === 'house')     return makeHouse(level);
+      if (kind === 'fence')     return makeFence();
+      if (kind === 'well')      return makeWell();
+      if (kind === 'lantern')   return makeLantern();
+      if (kind === 'water')     return makeWaterCap();
       return new THREE.Group();
     }
 
@@ -1071,9 +1346,9 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // WANDERING COW
+    // WANDERING ANIMALS
     // ─────────────────────────────────────────────────────────────
-    function makeCow() {
+    function makeCowMesh() {
       const g = new THREE.Group();
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.24), M.cowWhite);
       body.position.set(0, 0.22, 0);
@@ -1086,13 +1361,11 @@
       head.position.set(0.27, 0.30, 0); g.add(head);
       const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.10), M.cowMuzzle);
       muzzle.position.set(0.36, 0.26, 0); g.add(muzzle);
-      // eyes
       [-0.06, 0.06].forEach(dz => {
         const eye = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.025), M.cowSpot);
         eye.position.set(0.34, 0.35, dz);
         g.add(eye);
       });
-      // ears
       [-0.09, 0.09].forEach(dz => {
         const ear = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), M.cowSpot);
         ear.position.set(0.22, 0.42, dz);
@@ -1102,30 +1375,102 @@
       [[0.13, -0.08], [0.13, 0.08], [-0.13, -0.08], [-0.13, 0.08]].forEach(([x, z]) => {
         const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.07), M.hoof);
         leg.position.set(x, 0.08, z);
+        leg.userData.baseY = 0.08;
         g.add(leg);
         legs.push(leg);
       });
-      g.userData.legs = legs;
       castReceive(g);
-      return g;
+      return { mesh: g, legs };
     }
 
-    const cow = makeCow();
-    cow.position.set(worldX(2), 0.36, worldZ(5));
-    scene.add(cow);
-    let cowSrc = { x: cow.position.x, z: cow.position.z };
-    let cowDst = null;
-    let cowProgress = 1;
-    let cowPauseUntil = 0;
-    let cowFacing = 0;
+    function makeSheepMesh() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(roundedBox(0.36, 0.26, 0.24, 0.05), M.sheepWool);
+      body.position.set(0, 0.22, 0);
+      g.add(body);
+      // fluffy top puffs
+      [[-0.1, 0.04], [0, 0], [0.1, 0.04]].forEach(([x, z]) => {
+        const puff = new THREE.Mesh(roundedBox(0.13, 0.08, 0.13, 0.04), M.sheepWool);
+        puff.position.set(x, 0.38, z);
+        g.add(puff);
+      });
+      // dark face block
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.13, 0.13), M.sheepFace);
+      head.position.set(0.22, 0.28, 0);
+      g.add(head);
+      // ears
+      [-0.07, 0.07].forEach(dz => {
+        const ear = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), M.sheepFace);
+        ear.position.set(0.2, 0.4, dz);
+        g.add(ear);
+      });
+      // eyes
+      [-0.05, 0.05].forEach(dz => {
+        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.02), M.cowWhite);
+        eye.position.set(0.28, 0.31, dz);
+        g.add(eye);
+      });
+      const legs = [];
+      [[0.1, -0.08], [0.1, 0.08], [-0.1, -0.08], [-0.1, 0.08]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.06), M.sheepFace);
+        leg.position.set(x, 0.07, z);
+        leg.userData.baseY = 0.07;
+        g.add(leg);
+        legs.push(leg);
+      });
+      castReceive(g);
+      return { mesh: g, legs };
+    }
 
-    function pickCowTarget() {
+    function makeChickenMesh() {
+      const g = new THREE.Group();
+      // body
+      const body = new THREE.Mesh(roundedBox(0.18, 0.16, 0.14, 0.04), M.chickenBody);
+      body.position.set(0, 0.16, 0);
+      g.add(body);
+      // head
+      const head = new THREE.Mesh(roundedBox(0.1, 0.1, 0.1, 0.03), M.chickenBody);
+      head.position.set(0.13, 0.26, 0);
+      g.add(head);
+      // comb
+      const comb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.07), M.chickenComb);
+      comb.position.set(0.13, 0.34, 0);
+      g.add(comb);
+      // beak
+      const beak = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 0.035), M.chickenBeak);
+      beak.position.set(0.19, 0.24, 0);
+      g.add(beak);
+      // eyes
+      [-0.04, 0.04].forEach(dz => {
+        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.018, 0.018), M.cowSpot);
+        eye.position.set(0.17, 0.28, dz);
+        g.add(eye);
+      });
+      // tail
+      const tail = new THREE.Mesh(roundedBox(0.07, 0.1, 0.05, 0.025), M.chickenBody);
+      tail.position.set(-0.11, 0.22, 0);
+      g.add(tail);
+      // 2 legs only
+      const legs = [];
+      [[0.02, -0.05], [0.02, 0.05]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.08, 0.025), M.chickenBeak);
+        leg.position.set(x, 0.04, z);
+        leg.userData.baseY = 0.04;
+        g.add(leg);
+        legs.push(leg);
+      });
+      castReceive(g);
+      return { mesh: g, legs };
+    }
+
+    function pickRoamTarget() {
       const candidates = [];
+      const block = new Set(['water', 'house', 'tree', 'well', 'lantern', 'fence']);
       for (let x = 0; x < GRID; x++) {
         for (let z = 0; z < GRID; z++) {
           if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue;
           const c = gs.cells[cellKey(x, z)];
-          if (c && (c.kind === 'water' || c.kind === 'house' || c.kind === 'tree')) continue;
+          if (c && block.has(c.kind)) continue;
           candidates.push({ x, z });
         }
       }
@@ -1133,45 +1478,64 @@
       return candidates[Math.floor(Math.random() * candidates.length)];
     }
 
-    function updateCow(now, dt) {
-      // While idle: bob slightly
-      if (cowProgress >= 1) {
-        if (now < cowPauseUntil) {
-          cow.position.y = 0.36 + Math.sin(now / 800) * 0.01;
+    function spawnAnimal(meshLegs, x, z, opts) {
+      const { mesh, legs } = meshLegs;
+      mesh.position.set(worldX(x), 0.36, worldZ(z));
+      scene.add(mesh);
+      return {
+        mesh, legs,
+        speedMs: opts.speedMs,
+        stepRate: opts.stepRate,
+        bodyY: 0.36,
+        src: { x: mesh.position.x, z: mesh.position.z },
+        dst: null,
+        progress: 1,
+        pauseUntil: 0,
+        facing: 0,
+      };
+    }
+
+    const animals = [
+      spawnAnimal(makeCowMesh(),     2, 5, { speedMs: 2800, stepRate: 130 }),
+      spawnAnimal(makeSheepMesh(),   6, 2, { speedMs: 3400, stepRate: 110 }),
+      spawnAnimal(makeChickenMesh(), 5, 6, { speedMs: 1600, stepRate: 70  }),
+    ];
+
+    function updateAnimal(a, now, dt) {
+      if (a.progress >= 1) {
+        if (now < a.pauseUntil) {
+          a.mesh.position.y = a.bodyY + Math.sin(now / 800) * 0.01;
           return;
         }
-        const t = pickCowTarget();
-        if (!t) { cowPauseUntil = now + 2000; return; }
-        cowSrc = { x: cow.position.x, z: cow.position.z };
-        cowDst = { x: worldX(t.x), z: worldZ(t.z) };
-        cowProgress = 0;
-        cowPauseUntil = 0;
+        const t = pickRoamTarget();
+        if (!t) { a.pauseUntil = now + 2000; return; }
+        a.src = { x: a.mesh.position.x, z: a.mesh.position.z };
+        a.dst = { x: worldX(t.x), z: worldZ(t.z) };
+        a.progress = 0;
+        a.pauseUntil = 0;
       }
-      const speed = dt / 2800;
-      cowProgress = Math.min(1, cowProgress + speed);
-      const e = cowProgress;
-      cow.position.x = cowSrc.x + (cowDst.x - cowSrc.x) * e;
-      cow.position.z = cowSrc.z + (cowDst.z - cowSrc.z) * e;
-      const dx = cowDst.x - cowSrc.x;
-      const dz = cowDst.z - cowSrc.z;
+      a.progress = Math.min(1, a.progress + dt / a.speedMs);
+      const e = a.progress;
+      a.mesh.position.x = a.src.x + (a.dst.x - a.src.x) * e;
+      a.mesh.position.z = a.src.z + (a.dst.z - a.src.z) * e;
+      const dx = a.dst.x - a.src.x;
+      const dz = a.dst.z - a.src.z;
       if (Math.hypot(dx, dz) > 0.001) {
         const want = Math.atan2(dx, dz) - Math.PI / 2;
-        // smooth rotate
-        let diff = want - cowFacing;
+        let diff = want - a.facing;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
-        cowFacing += diff * Math.min(1, dt / 200);
-        cow.rotation.y = cowFacing;
+        a.facing += diff * Math.min(1, dt / 200);
+        a.mesh.rotation.y = a.facing;
       }
-      // Walk animation
-      const stepT = now / 130;
-      cow.userData.legs.forEach((leg, i) => {
+      const stepT = now / a.stepRate;
+      a.legs.forEach((leg, i) => {
         const phase = (i === 0 || i === 3) ? 0 : Math.PI;
-        leg.position.y = 0.08 + Math.max(0, Math.sin(stepT + phase)) * 0.05;
+        leg.position.y = (leg.userData.baseY || 0.08) + Math.max(0, Math.sin(stepT + phase)) * 0.05;
       });
-      cow.position.y = 0.36 + Math.abs(Math.sin(stepT * 2)) * 0.02;
-      if (cowProgress >= 1) {
-        cowPauseUntil = now + 800 + Math.random() * 1800;
+      a.mesh.position.y = a.bodyY + Math.abs(Math.sin(stepT * 2)) * 0.02;
+      if (a.progress >= 1) {
+        a.pauseUntil = now + 800 + Math.random() * 1800;
       }
     }
 
@@ -1246,7 +1610,9 @@
         }
       }
 
-      if (tickStarted) updateCow(now, dt);
+      if (tickStarted) {
+        for (const a of animals) updateAnimal(a, now, dt);
+      }
 
       // Time-of-day advance (always — bounded loop, fine for preload)
       const todElapsedMs = now - lastTodAdvance;
