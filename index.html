@@ -287,23 +287,139 @@
     cam.position.set(11, 11, 11);
     cam.lookAt(0, 0, 0);
 
-    // Lights — original-style: dim ambient + warm hemi + strong directional
-    scene.add(new THREE.AmbientLight(0xffffff, 0.18));
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xb39879, 0.42));
+    // Lights — refs kept for TOD modulation
+    const ambient = new THREE.AmbientLight(0xffffff, 0.18);
+    scene.add(ambient);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0xb39879, 0.42);
+    scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xffffff, 1.25);
     sun.position.set(8, 11, 5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.left = -10;
-    sun.shadow.camera.right = 10;
-    sun.shadow.camera.top = 10;
-    sun.shadow.camera.bottom = -10;
+    sun.shadow.camera.left = -12;
+    sun.shadow.camera.right = 12;
+    sun.shadow.camera.top = 12;
+    sun.shadow.camera.bottom = -12;
     sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 40;
+    sun.shadow.camera.far = 60;
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
     sun.shadow.radius = 1.4;
     scene.add(sun);
+
+    // ─────────────────────────────────────────────────────────────
+    // TIME-OF-DAY (auto cycle)
+    // ─────────────────────────────────────────────────────────────
+    let todMinutes = 540; // start at 9AM
+    const TOD_CYCLE_MS = 300000; // 5 real minutes = 24 game hours
+    let lastTodAdvance = performance.now();
+
+    const TOD_ANCHORS = [
+      { t:    0, sunI: 0.18, hemiI: 0.30, sunC: 0x6f8acf, hemiSky: 0x2a3c70, hemiGnd: 0x161a26, ambI: 0.34, bg: 0x0c1226 },
+      { t:  300, sunI: 0.22, hemiI: 0.32, sunC: 0x7a8fcc, hemiSky: 0x3c4a78, hemiGnd: 0x222536, ambI: 0.32, bg: 0x162244 },
+      { t:  420, sunI: 0.85, hemiI: 0.45, sunC: 0xffc794, hemiSky: 0xffd9a6, hemiGnd: 0x6f4b2a, ambI: 0.22, bg: 0xf2c2a0 },
+      { t:  600, sunI: 1.15, hemiI: 0.44, sunC: 0xfff6dc, hemiSky: 0xfff0d2, hemiGnd: 0xb39879, ambI: 0.18, bg: 0xf4ede0 },
+      { t:  780, sunI: 1.25, hemiI: 0.42, sunC: 0xffffff, hemiSky: 0xffffff, hemiGnd: 0xb39879, ambI: 0.18, bg: 0xddeefc },
+      { t:  960, sunI: 1.15, hemiI: 0.42, sunC: 0xfff0dc, hemiSky: 0xfde9c4, hemiGnd: 0xa68460, ambI: 0.20, bg: 0xf4ede0 },
+      { t: 1080, sunI: 0.95, hemiI: 0.42, sunC: 0xffaa70, hemiSky: 0xffb088, hemiGnd: 0x8a5a32, ambI: 0.22, bg: 0xe4956a },
+      { t: 1170, sunI: 0.70, hemiI: 0.40, sunC: 0xff8050, hemiSky: 0xff7a60, hemiGnd: 0x6f4b2a, ambI: 0.26, bg: 0xd9784a },
+      { t: 1260, sunI: 0.38, hemiI: 0.34, sunC: 0xa078c0, hemiSky: 0x6a5598, hemiGnd: 0x2f2638, ambI: 0.30, bg: 0x563e6a },
+      { t: 1380, sunI: 0.22, hemiI: 0.32, sunC: 0x7a8fcc, hemiSky: 0x3c4a78, hemiGnd: 0x222536, ambI: 0.32, bg: 0x162244 },
+      { t: 1440, sunI: 0.18, hemiI: 0.30, sunC: 0x6f8acf, hemiSky: 0x2a3c70, hemiGnd: 0x161a26, ambI: 0.34, bg: 0x0c1226 },
+    ];
+
+    function lerpHex(a, b, t) {
+      const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+      const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+      return ((ar + (br - ar) * t) | 0) << 16 |
+             ((ag + (bg - ag) * t) | 0) << 8 |
+             ((ab + (bb - ab) * t) | 0);
+    }
+
+    function todProfile(min) {
+      for (let i = 0; i < TOD_ANCHORS.length - 1; i++) {
+        const a = TOD_ANCHORS[i], b = TOD_ANCHORS[i + 1];
+        if (min >= a.t && min <= b.t) {
+          const tt = (min - a.t) / Math.max(1, b.t - a.t);
+          return {
+            sunI:  a.sunI  + (b.sunI  - a.sunI)  * tt,
+            hemiI: a.hemiI + (b.hemiI - a.hemiI) * tt,
+            ambI:  a.ambI  + (b.ambI  - a.ambI)  * tt,
+            sunC:  lerpHex(a.sunC,  b.sunC,  tt),
+            hemiSky: lerpHex(a.hemiSky, b.hemiSky, tt),
+            hemiGnd: lerpHex(a.hemiGnd, b.hemiGnd, tt),
+            bg:    lerpHex(a.bg,    b.bg,    tt),
+          };
+        }
+      }
+      return TOD_ANCHORS[0];
+    }
+
+    function applyTod() {
+      const p = todProfile(todMinutes);
+      sun.intensity = p.sunI;
+      sun.color.setHex(p.sunC);
+      hemi.intensity = p.hemiI;
+      hemi.color.setHex(p.hemiSky);
+      hemi.groundColor.setHex(p.hemiGnd);
+      ambient.intensity = p.ambI;
+      scene.background.setHex(p.bg);
+      scene.fog.color.setHex(p.bg);
+    }
+    applyTod();
+
+    // ─────────────────────────────────────────────────────────────
+    // CLOUDS (low-poly, drifting, cast shadows on the island)
+    // ─────────────────────────────────────────────────────────────
+    const cloudGroup = new THREE.Group();
+    scene.add(cloudGroup);
+    const clouds = [];
+    const CLOUD_COUNT = 7;
+    const CLOUD_HEIGHT = 7.2;
+    const CLOUD_RANGE = 14;
+
+    function makeCloud() {
+      const g = new THREE.Group();
+      const puffs = 6 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < puffs; i++) {
+        const r = 0.45 + Math.random() * 0.55;
+        const mat = new THREE.MeshLambertMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.72 + Math.random() * 0.18,
+          depthWrite: false,
+        });
+        // customDepthMaterial trick so transparent puffs still cast shadow
+        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat);
+        m.position.set(
+          (Math.random() - 0.5) * 3.6,
+          Math.random() * 0.6,
+          (Math.random() - 0.5) * 2.0
+        );
+        m.castShadow = true;
+        m.receiveShadow = false;
+        m.customDepthMaterial = new THREE.MeshDepthMaterial({
+          depthPacking: THREE.RGBADepthPacking,
+          alphaTest: 0.35,
+          opacity: mat.opacity,
+        });
+        g.add(m);
+      }
+      g.scale.y = 0.5;
+      g.userData.driftSpeed = 0.18 + Math.random() * 0.22; // units per second
+      return g;
+    }
+
+    for (let i = 0; i < CLOUD_COUNT; i++) {
+      const c = makeCloud();
+      c.position.set(
+        (Math.random() - 0.5) * CLOUD_RANGE * 2,
+        CLOUD_HEIGHT + (Math.random() - 0.5) * 1.4,
+        (Math.random() - 0.5) * CLOUD_RANGE
+      );
+      cloudGroup.add(c);
+      clouds.push(c);
+    }
 
     // ─────────────────────────────────────────────────────────────
     // GEOMETRY HELPERS
@@ -1013,6 +1129,21 @@
       }
 
       if (tickStarted) updateCow(now, dt);
+
+      // Time-of-day advance (always — bounded loop, fine for preload)
+      const todElapsedMs = now - lastTodAdvance;
+      lastTodAdvance = now;
+      todMinutes = (todMinutes + (todElapsedMs / TOD_CYCLE_MS) * 1440) % 1440;
+      applyTod();
+
+      // Clouds drift; wrap around
+      for (const c of clouds) {
+        c.position.x += c.userData.driftSpeed * dt / 1000;
+        if (c.position.x > CLOUD_RANGE) {
+          c.position.x = -CLOUD_RANGE - Math.random() * 4;
+          c.position.z = (Math.random() - 0.5) * CLOUD_RANGE;
+        }
+      }
 
       renderer.render(scene, cam);
     }
