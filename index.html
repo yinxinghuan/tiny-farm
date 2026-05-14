@@ -508,9 +508,12 @@
       scene.background.setHex(p.bg);
       scene.fog.color.setHex(p.bg);
       // Lanterns glow brighter at night
-      if (M.lampGlass) {
-        M.lampGlass.emissiveIntensity = 0.25 + (1 - Math.min(1, p.sunI)) * 1.2;
-      }
+      // (try/catch — M is `const`, initial call happens before its declaration)
+      try {
+        if (M.lampGlass) {
+          M.lampGlass.emissiveIntensity = 0.25 + (1 - Math.min(1, p.sunI)) * 1.2;
+        }
+      } catch {}
     }
     applyTod();
 
