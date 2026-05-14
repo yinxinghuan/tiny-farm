@@ -1,0 +1,9 @@
+{
+  "name": "tiny-farm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "build": "node -e \"require('fs').existsSync('index.html') && require('fs').existsSync('meta.json') || process.exit(1)\""
+  }
+}

@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Tiny Farm</title>
+<style>
+  :root {
+    color-scheme: light;
+    --sky-top: #fde9c4;
+    --sky-bot: #b9e6f5;
+    --coin: #f4c641;
+    --coin-shadow: #b88416;
+    --ink: #2e2a1f;
+    --dock-bg: rgba(255, 250, 238, 0.86);
+    --dock-border: rgba(50, 40, 20, 0.12);
+    --dock-shadow: 0 -8px 24px rgba(50, 40, 20, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #b9e6f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+  }
+  body {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  #sky {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, var(--sky-top) 0%, #ffd8a8 35%, #ffeac1 55%, var(--sky-bot) 100%);
+    z-index: 0;
+  }
+  canvas#canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    touch-action: none;
+  }
+
+  /* HUD top */
+  #hud {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top));
+    right: 14px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  #coin-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255, 250, 238, 0.92);
+    border: 1px solid rgba(184, 132, 22, 0.25);
+    border-radius: 999px;
+    padding: 6px 14px 6px 8px;
+    box-shadow: 0 4px 12px rgba(50, 40, 20, 0.1);
+    font-weight: 800;
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    pointer-events: auto;
+  }
+  #coin-pill .icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffe79a, var(--coin) 60%, var(--coin-shadow));
+    box-shadow: inset 0 -2px 0 rgba(184, 132, 22, 0.35);
+    display: inline-block;
+  }
+  #coin-pill.pulse { animation: coinpop 0.36s ease-out; }
+  @keyframes coinpop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  /* Top-left hint */
+  #hint {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top));
+    left: 14px;
+    z-index: 20;
+    background: rgba(255, 250, 238, 0.86);
+    border: 1px solid rgba(50, 40, 20, 0.12);
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: 0.85;
+    max-width: 50vw;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  #hint.hide { opacity: 0; }
+
+  /* Dock */
+  #dock-wrap {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 25;
+    display: flex; justify-content: center;
+    padding: 0 12px;
+    pointer-events: none;
+  }
+  #dock {
+    display: flex;
+    gap: 8px;
+    background: var(--dock-bg);
+    border: 1px solid var(--dock-border);
+    border-radius: 22px;
+    padding: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--dock-shadow);
+    pointer-events: auto;
+    touch-action: pan-x;
+    max-width: 92vw;
+    scroll-snap-type: x proximity;
+  }
+  #dock::-webkit-scrollbar { display: none; }
+  .tool {
+    flex: 0 0 auto;
+    width: 60px;
+    height: 70px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
+    scroll-snap-align: center;
+    position: relative;
+  }
+  .tool .glyph {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.12));
+  }
+  .tool .cost {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 3px;
+    opacity: 0.78;
+  }
+  .tool .cost .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffe79a, var(--coin) 60%, var(--coin-shadow));
+  }
+  .tool.locked {
+    opacity: 0.42;
+    filter: grayscale(0.9);
+  }
+  .tool.locked .glyph { filter: none; }
+  .tool.locked .cost .dot {
+    background: #b9b3a3;
+  }
+  .tool.locked .cost::before {
+    content: "🔒 ";
+    margin-right: 1px;
+  }
+  .tool:not(.locked):active { transform: scale(0.94); }
+  .tool.selected {
+    background: rgba(255, 235, 170, 0.95);
+    border-color: rgba(244, 198, 65, 0.7);
+    box-shadow: 0 4px 12px rgba(244, 198, 65, 0.4);
+  }
+  .tool.cant-afford .cost { color: #b34a3b; }
+
+  /* Watermark */
+  #watermark {
+    position: absolute;
+    left: 10px;
+    bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
+    width: 64px;
+    height: auto;
+    opacity: 0.55;
+    z-index: 18;
+    pointer-events: none;
+  }
+
+  /* Toast */
+  #toast {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 30;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .toast-bubble {
+    background: rgba(255, 250, 238, 0.97);
+    color: var(--ink);
+    border-radius: 16px;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: 14px;
+    border: 1px solid rgba(50, 40, 20, 0.12);
+    box-shadow: 0 6px 20px rgba(50, 40, 20, 0.18);
+    animation: toast-in 0.42s cubic-bezier(.34,1.56,.64,1) both, toast-out 0.5s ease 1.8s forwards;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast-bubble.unlock {
+    background: linear-gradient(135deg, #fff6df, #ffe9a3);
+    border-color: rgba(244, 198, 65, 0.6);
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-12px) scale(0.92); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  }
+
+  /* Floating +N when coin gained */
+  .float-num {
+    position: absolute;
+    pointer-events: none;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--coin-shadow);
+    text-shadow: 0 1px 0 #fff, 0 0 6px rgba(255,255,255,0.7);
+    z-index: 22;
+    animation: floatup 0.85s ease-out forwards;
+  }
+  @keyframes floatup {
+    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+    18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.05); }
+    100% { opacity: 0; transform: translate(-50%, -36px) scale(1); }
+  }
+
+  /* Resume dialog */
+  #resume-overlay {
+    display: none;
+    position: absolute; inset: 0;
+    z-index: 60;
+    background: rgba(40, 30, 15, 0.55);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    align-items: center; justify-content: center;
+  }
+  #resume-overlay.show { display: flex; }
+  .resume-panel {
+    width: min(86%, 300px);
+    background: #fffaee;
+    border: 1px solid rgba(50, 40, 20, 0.15);
+    border-radius: 22px;
+    padding: 26px 22px 20px;
+    text-align: center;
+    animation: panel-in 0.3s cubic-bezier(.34,1.4,.64,1);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+  }
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .resume-panel .ico { font-size: 38px; margin-bottom: 10px; }
+  .resume-panel h2 { margin: 0 0 6px; font-size: 16px; }
+  .resume-panel p  { margin: 0 0 18px; font-size: 12px; color: #8a7a55; }
+  .resume-panel button {
+    display: block; width: 100%; height: 44px;
+    border-radius: 22px; border: none;
+    font: inherit; font-size: 14px; font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .resume-panel button:active { transform: scale(0.96); opacity: 0.85; }
+  .resume-panel .yes {
+    background: linear-gradient(135deg, #f4c641, #e0982d);
+    color: #2e2a1f;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(224, 152, 45, 0.35);
+  }
+  .resume-panel .no {
+    background: rgba(50, 40, 20, 0.06);
+    color: rgba(50, 40, 20, 0.6);
+    border: 1px solid rgba(50, 40, 20, 0.1);
+  }
+</style>
+</head>
+<body>
+  <div id="sky"></div>
+  <canvas id="canvas"></canvas>
+
+  <div id="hint">tap a seed below, then a tile</div>
+
+  <div id="hud">
+    <div id="coin-pill"><span class="icon"></span><span id="coin-count">0</span></div>
+  </div>
+
+  <img id="watermark" src="img/aigram.svg" alt="">
+
+  <div id="toast"></div>
+
+  <div id="dock-wrap"><div id="dock"></div></div>
+
+  <div id="resume-overlay">
+    <div class="resume-panel">
+      <div class="ico">🌾</div>
+      <h2>Welcome back to your farm</h2>
+      <p id="resume-sub">Your progress is saved</p>
+      <button class="yes" id="resume-yes">Continue</button>
+      <button class="no" id="resume-no">Start fresh</button>
+    </div>
+  </div>
+
+  <script src="vendor/three.min.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ─────────────────────────────────────────────────────────────
+    // CONSTANTS / CONFIG
+    // ─────────────────────────────────────────────────────────────
+    const GRID = 8;
+    const TILE = 1;
+    const SAVE_KEY = 'tiny_farm_v1_save';
+    const MAX_COINS_PER_CELL = 3;
+    const COIN_AUTO_PICKUP_MS = 45000;
+    const STARTING_COINS = 3;
+
+    // Tools (order = dock order)
+    // type: 'crop' (grows, harvested once) | 'object' (passive, spawns coins) | 'erase'
+    // level: stack upgrade max
+    const TOOLS = [
+      { id: 'wheat',     name: 'Wheat',      glyph: '🌾', cost: 1,  unlock: 0,    type: 'crop',   growMs: 8000,  yield: 2,  maxLevel: 1 },
+      { id: 'tree',      name: 'Tree',       glyph: '🌳', cost: 4,  unlock: 0,    type: 'object', spawnMs: 14000, yield: 1, maxLevel: 3 },
+      { id: 'corn',      name: 'Corn',       glyph: '🌽', cost: 5,  unlock: 12,   type: 'crop',   growMs: 12000, yield: 6,  maxLevel: 1 },
+      { id: 'flower',    name: 'Flower',     glyph: '🌷', cost: 2,  unlock: 25,   type: 'crop',   growMs: 5000,  yield: 2,  maxLevel: 1 },
+      { id: 'cow',       name: 'Cow',        glyph: '🐄', cost: 18, unlock: 60,   type: 'object', spawnMs: 11000, yield: 4, maxLevel: 3 },
+      { id: 'sunflower', name: 'Sunflower',  glyph: '🌻', cost: 12, unlock: 120,  type: 'crop',   growMs: 18000, yield: 14, maxLevel: 1 },
+      { id: 'house',     name: 'House',      glyph: '🏠', cost: 35, unlock: 220,  type: 'object', spawnMs: 13000, yield: 7, maxLevel: 3 },
+      { id: 'pumpkin',   name: 'Pumpkin',    glyph: '🎃', cost: 25, unlock: 380,  type: 'crop',   growMs: 28000, yield: 32, maxLevel: 1 },
+      { id: 'apple',     name: 'Apple Tree', glyph: '🍎', cost: 70, unlock: 700,  type: 'object', spawnMs: 16000, yield: 14, maxLevel: 3 },
+      { id: 'erase',     name: 'Remove',     glyph: '✕',  cost: 0,  unlock: 0,    type: 'erase',  maxLevel: 0 },
+    ];
+
+    // ─────────────────────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────────────────────
+    const gs = {
+      coins: STARTING_COINS,
+      cells: {},          // 'x,z' → { tool, level, plantedAt, lastSpawn, ripe, stage }
+      pickups: [],        // floating coins: { x, z, mesh, born, slot }
+      seenUnlocks: {},    // toolId → true once toast shown
+      hintShown: true,
+    };
+
+    let started = false; // true once first user interaction
+    let selectedTool = null;
+    let pickupGrowthStarted = false;
+
+    // ─────────────────────────────────────────────────────────────
+    // THREE.JS SCENE
+    // ─────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0xfde9c4, 18, 36);
+
+    // Orthographic isometric camera
+    let camZoom = 1.0;
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+    cam.position.set(11, 11, 11);
+    cam.lookAt(0, 0, 0);
+
+    // Lights
+    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x4a6d35, 0.78));
+    const sun = new THREE.DirectionalLight(0xfff2c8, 0.95);
+    sun.position.set(8, 14, 4);
+    scene.add(sun);
+
+    // Ground halo under island
+    {
+      const halo = new THREE.Mesh(
+        new THREE.CircleGeometry(GRID * 0.85, 48),
+        new THREE.MeshBasicMaterial({ color: 0x3a6b2e, transparent: true, opacity: 0.18 })
+      );
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = -0.02;
+      scene.add(halo);
+    }
+
+    // Tile grass colors (slight variation)
+    const grassMats = [0x7eba4f, 0x73b04a, 0x86c156, 0x6fa645].map(c =>
+      new THREE.MeshLambertMaterial({ color: c })
+    );
+    const sideMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2a });
+    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x5e3f24 });
+
+    // Pre-built materials cache for sprites
+    const M = {
+      trunk:    new THREE.MeshLambertMaterial({ color: 0x6b4322 }),
+      leafA:    new THREE.MeshLambertMaterial({ color: 0x3f8b3f }),
+      leafB:    new THREE.MeshLambertMaterial({ color: 0x4ea050 }),
+      apple:    new THREE.MeshLambertMaterial({ color: 0xc63838 }),
+      wheatStem:new THREE.MeshLambertMaterial({ color: 0x9bbb4a }),
+      wheatRipe:new THREE.MeshLambertMaterial({ color: 0xefc44d, emissive: 0x5b400a, emissiveIntensity: 0.3 }),
+      sprout:   new THREE.MeshLambertMaterial({ color: 0x7ed35a }),
+      cornStem: new THREE.MeshLambertMaterial({ color: 0x5b8e2e }),
+      cornEar:  new THREE.MeshLambertMaterial({ color: 0xf7d04a, emissive: 0x533a06, emissiveIntensity: 0.3 }),
+      petalA:   new THREE.MeshLambertMaterial({ color: 0xff7c9e }),
+      petalB:   new THREE.MeshLambertMaterial({ color: 0xffd84a }),
+      petalC:   new THREE.MeshLambertMaterial({ color: 0x9b6cf3 }),
+      sunfPetal:new THREE.MeshLambertMaterial({ color: 0xf6c12c, emissive: 0x4a3308, emissiveIntensity: 0.25 }),
+      sunfCore: new THREE.MeshLambertMaterial({ color: 0x6b3f10 }),
+      pumpkin:  new THREE.MeshLambertMaterial({ color: 0xea7d2b, emissive: 0x4d1e02, emissiveIntensity: 0.18 }),
+      stemGreen:new THREE.MeshLambertMaterial({ color: 0x4a7d2c }),
+      cowBody:  new THREE.MeshLambertMaterial({ color: 0xfafafa }),
+      cowSpot:  new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
+      cowSnout: new THREE.MeshLambertMaterial({ color: 0xf4c3c0 }),
+      houseWall:new THREE.MeshLambertMaterial({ color: 0xf2e1bf }),
+      houseRoof:new THREE.MeshLambertMaterial({ color: 0xc25b3a }),
+      door:     new THREE.MeshLambertMaterial({ color: 0x5a3a1f }),
+      window:   new THREE.MeshLambertMaterial({ color: 0x8ed3ff, emissive: 0x223344, emissiveIntensity: 0.2 }),
+      coin:     new THREE.MeshLambertMaterial({ color: 0xf4c641, emissive: 0x6b4a0e, emissiveIntensity: 0.5 }),
+      coinSide: new THREE.MeshLambertMaterial({ color: 0xb88416 }),
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // GRID / CELLS
+    // ─────────────────────────────────────────────────────────────
+    const cellMeshes = {};   // 'x,z' → Three.js group (tile + sprite)
+    const tileMeshes = [];   // for raycasting
+
+    function cellKey(x, z) { return x + ',' + z; }
+    function worldX(x) { return (x - (GRID - 1) / 2) * TILE; }
+    function worldZ(z) { return (z - (GRID - 1) / 2) * TILE; }
+
+    // Seeded RNG per cell so sprite layout is stable
+    function srand(seed) {
+      let s = seed | 0;
+      return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; };
+    }
+
+    function buildTile(x, z) {
+      const group = new THREE.Group();
+      const tileGeom = new THREE.BoxGeometry(TILE * 0.96, 0.36, TILE * 0.96);
+      const mats = [sideMat, sideMat, grassMats[(x + z * 3) % grassMats.length], dirtMat, sideMat, sideMat];
+      const tile = new THREE.Mesh(tileGeom, mats);
+      tile.position.y = 0.18;
+      tile.userData = { isTile: true, x, z };
+      group.add(tile);
+      group.position.set(worldX(x), 0, worldZ(z));
+      tileMeshes.push(tile);
+      return { group, tile, sprite: null };
+    }
+
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
+        const c = buildTile(x, z);
+        scene.add(c.group);
+        cellMeshes[cellKey(x, z)] = c;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SPRITE FACTORIES (returns Group anchored at tile center y=0.36 top)
+    // ─────────────────────────────────────────────────────────────
+
+    function makeWheat(stage) {
+      const g = new THREE.Group();
+      const rng = srand(stage * 31 + 7);
+      const heights = [0.12, 0.32, 0.52];
+      const h = heights[stage];
+      const stemMat = stage < 2 ? M.wheatStem : M.wheatRipe;
+      for (let i = 0; i < 7; i++) {
+        const stalk = new THREE.Mesh(
+          new THREE.BoxGeometry(0.07, h, 0.07),
+          stemMat
+        );
+        stalk.position.set(
+          (rng() - 0.5) * 0.6,
+          h / 2,
+          (rng() - 0.5) * 0.6
+        );
+        g.add(stalk);
+      }
+      if (stage === 2) {
+        const cap = new THREE.Mesh(
+          new THREE.BoxGeometry(0.78, 0.06, 0.78),
+          M.wheatRipe
+        );
+        cap.position.y = h + 0.04;
+        g.add(cap);
+      }
+      return g;
+    }
+
+    function makeCorn(stage) {
+      const g = new THREE.Group();
+      const h = [0.18, 0.45, 0.72][stage];
+      const stemMat = M.cornStem;
+      for (let i = 0; i < 4; i++) {
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.06, h, 5),
+          stemMat
+        );
+        const a = (i / 4) * Math.PI * 2;
+        stem.position.set(Math.cos(a) * 0.2, h / 2, Math.sin(a) * 0.2);
+        g.add(stem);
+        if (stage === 2) {
+          const ear = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.07, 0.07, 0.22, 6),
+            M.cornEar
+          );
+          ear.position.set(Math.cos(a) * 0.2, h - 0.18, Math.sin(a) * 0.2);
+          g.add(ear);
+        }
+      }
+      return g;
+    }
+
+    function makeFlower(stage) {
+      const g = new THREE.Group();
+      const colors = [M.petalA, M.petalB, M.petalC];
+      const h = [0.1, 0.22, 0.38][stage];
+      const rng = srand(stage * 17 + 3);
+      for (let i = 0; i < 4; i++) {
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, h, 5),
+          M.wheatStem
+        );
+        const x = (rng() - 0.5) * 0.5;
+        const z = (rng() - 0.5) * 0.5;
+        stem.position.set(x, h / 2, z);
+        g.add(stem);
+        if (stage === 2) {
+          const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.09, 8, 6),
+            colors[i % 3]
+          );
+          head.position.set(x, h + 0.04, z);
+          g.add(head);
+        }
+      }
+      return g;
+    }
+
+    function makeSunflower(stage) {
+      const g = new THREE.Group();
+      const h = [0.2, 0.55, 0.88][stage];
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.07, h, 6),
+        M.cornStem
+      );
+      stem.position.y = h / 2;
+      g.add(stem);
+      // big leaves
+      if (stage > 0) {
+        for (let i = 0; i < 2; i++) {
+          const leaf = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, 0.06, 0.32),
+            M.leafA
+          );
+          leaf.position.set(0, h * 0.6, 0);
+          leaf.rotation.y = i * Math.PI;
+          leaf.position.x = i === 0 ? 0.18 : -0.18;
+          g.add(leaf);
+        }
+      }
+      if (stage === 2) {
+        // Disc head
+        const disc = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.26, 0.26, 0.06, 18),
+          M.sunfPetal
+        );
+        disc.position.y = h;
+        disc.rotation.x = -0.18;
+        g.add(disc);
+        const core = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.13, 0.13, 0.07, 12),
+          M.sunfCore
+        );
+        core.position.y = h + 0.02;
+        core.rotation.x = -0.18;
+        g.add(core);
+      }
+      return g;
+    }
+
+    function makePumpkin(stage) {
+      const g = new THREE.Group();
+      const size = [0.14, 0.28, 0.42][stage];
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 14, 10),
+        stage === 2 ? M.pumpkin : M.sprout
+      );
+      body.scale.set(1, 0.78, 1);
+      body.position.y = size * 0.78;
+      g.add(body);
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.05, 0.12, 5),
+        M.stemGreen
+      );
+      stem.position.y = size * 1.6;
+      g.add(stem);
+      return g;
+    }
+
+    function makeTree(level) {
+      const g = new THREE.Group();
+      const trunkH = 0.35 + level * 0.08;
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.11, trunkH, 6),
+        M.trunk
+      );
+      trunk.position.y = trunkH / 2;
+      g.add(trunk);
+      const crownR = 0.28 + level * 0.08;
+      const crown = new THREE.Mesh(
+        new THREE.SphereGeometry(crownR, 12, 10),
+        M.leafA
+      );
+      crown.position.y = trunkH + crownR * 0.6;
+      g.add(crown);
+      if (level >= 2) {
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(crownR * 0.7, 10, 8),
+          M.leafB
+        );
+        cap.position.y = trunkH + crownR * 1.1;
+        cap.position.x = 0.05;
+        g.add(cap);
+      }
+      return g;
+    }
+
+    function makeApple(level) {
+      const g = new THREE.Group();
+      const trunkH = 0.38 + level * 0.08;
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.12, trunkH, 6),
+        M.trunk
+      );
+      trunk.position.y = trunkH / 2;
+      g.add(trunk);
+      const crownR = 0.32 + level * 0.08;
+      const crown = new THREE.Mesh(
+        new THREE.SphereGeometry(crownR, 14, 10),
+        M.leafB
+      );
+      crown.position.y = trunkH + crownR * 0.6;
+      g.add(crown);
+      // apples
+      const count = 5 + level * 3;
+      const rng = srand(level * 41 + 13);
+      for (let i = 0; i < count; i++) {
+        const a = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 8, 6),
+          M.apple
+        );
+        const theta = rng() * Math.PI * 2;
+        const phi = rng() * Math.PI * 0.6 + Math.PI * 0.1;
+        a.position.set(
+          Math.sin(phi) * Math.cos(theta) * crownR,
+          trunkH + crownR * 0.6 + Math.cos(phi) * crownR * 0.7,
+          Math.sin(phi) * Math.sin(theta) * crownR
+        );
+        g.add(a);
+      }
+      return g;
+    }
+
+    function makeCow(level) {
+      const g = new THREE.Group();
+      const scale = 1 + (level - 1) * 0.15;
+      // Body
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5 * scale, 0.3 * scale, 0.3 * scale),
+        M.cowBody
+      );
+      body.position.y = 0.22 * scale;
+      g.add(body);
+      // Head
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22 * scale, 0.2 * scale, 0.22 * scale),
+        M.cowBody
+      );
+      head.position.set(0.32 * scale, 0.3 * scale, 0);
+      g.add(head);
+      // Snout
+      const snout = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.14 * scale),
+        M.cowSnout
+      );
+      snout.position.set(0.43 * scale, 0.27 * scale, 0);
+      g.add(snout);
+      // Legs
+      for (let i = 0; i < 4; i++) {
+        const leg = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08 * scale, 0.16 * scale, 0.08 * scale),
+          M.cowSpot
+        );
+        leg.position.set(
+          (i < 2 ? -0.18 : 0.18) * scale,
+          0.07 * scale,
+          (i % 2 === 0 ? -0.1 : 0.1) * scale
+        );
+        g.add(leg);
+      }
+      // Spots
+      const rng = srand(level * 19);
+      const spotCount = 2 + level;
+      for (let i = 0; i < spotCount; i++) {
+        const sp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06 * scale + rng() * 0.04, 8, 6),
+          M.cowSpot
+        );
+        sp.position.set(
+          (rng() - 0.5) * 0.4 * scale,
+          0.27 * scale + (rng() - 0.5) * 0.1,
+          (rng() < 0.5 ? -0.16 : 0.16) * scale
+        );
+        sp.scale.set(1, 1, 0.5);
+        g.add(sp);
+      }
+      // Ears
+      for (let i = 0; i < 2; i++) {
+        const ear = new THREE.Mesh(
+          new THREE.BoxGeometry(0.07 * scale, 0.07 * scale, 0.04 * scale),
+          M.cowSpot
+        );
+        ear.position.set(0.32 * scale, 0.42 * scale, (i === 0 ? -0.1 : 0.1) * scale);
+        g.add(ear);
+      }
+      return g;
+    }
+
+    function makeHouse(level) {
+      const g = new THREE.Group();
+      const s = 1 + (level - 1) * 0.18;
+      // walls
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(0.62 * s, 0.5 * s, 0.5 * s),
+        M.houseWall
+      );
+      wall.position.y = 0.25 * s;
+      g.add(wall);
+      // roof (pyramid)
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(0.52 * s, 0.32 * s, 4),
+        M.houseRoof
+      );
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 0.5 * s + 0.16 * s;
+      g.add(roof);
+      // door
+      const door = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12 * s, 0.22 * s, 0.04 * s),
+        M.door
+      );
+      door.position.set(0, 0.11 * s, 0.26 * s);
+      g.add(door);
+      // window
+      const win = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12 * s, 0.12 * s, 0.04 * s),
+        M.window
+      );
+      win.position.set(0.18 * s, 0.32 * s, 0.26 * s);
+      g.add(win);
+      if (level >= 2) {
+        const win2 = win.clone();
+        win2.position.x = -0.18 * s;
+        g.add(win2);
+      }
+      // chimney
+      if (level >= 2) {
+        const chim = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.08 * s),
+          M.houseRoof
+        );
+        chim.position.set(-0.18 * s, 0.62 * s, -0.08 * s);
+        g.add(chim);
+      }
+      return g;
+    }
+
+    function makeSprite(toolId, level, stage) {
+      switch (toolId) {
+        case 'wheat':     return makeWheat(stage);
+        case 'corn':      return makeCorn(stage);
+        case 'flower':    return makeFlower(stage);
+        case 'sunflower': return makeSunflower(stage);
+        case 'pumpkin':   return makePumpkin(stage);
+        case 'tree':      return makeTree(level);
+        case 'apple':     return makeApple(level);
+        case 'cow':       return makeCow(level);
+        case 'house':     return makeHouse(level);
+      }
+      return new THREE.Group();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CELL OPERATIONS
+    // ─────────────────────────────────────────────────────────────
+    function getCell(x, z) {
+      return gs.cells[cellKey(x, z)];
+    }
+
+    function setSprite(x, z, group) {
+      const cm = cellMeshes[cellKey(x, z)];
+      if (cm.sprite) {
+        cm.group.remove(cm.sprite);
+        disposeGroup(cm.sprite);
+      }
+      cm.sprite = group;
+      if (group) {
+        group.position.y = 0.36;
+        cm.group.add(group);
+        // Drop-in animation
+        group.userData.dropFrom = 1.4;
+        group.userData.dropAt = performance.now();
+      }
+    }
+
+    function disposeGroup(g) {
+      g.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+      });
+    }
+
+    function placeAt(x, z, toolId) {
+      const tool = TOOLS.find(t => t.id === toolId);
+      if (!tool || tool.type === 'erase') return false;
+      if (gs.coins < tool.cost) {
+        flashCantAfford();
+        return false;
+      }
+
+      const existing = getCell(x, z);
+
+      // Upgrade path: same tool, same cell, level < maxLevel
+      if (existing && existing.tool === toolId && tool.type === 'object' && existing.level < tool.maxLevel) {
+        const upgradeCost = tool.cost * (existing.level + 1);
+        if (gs.coins < upgradeCost) {
+          flashCantAfford(upgradeCost);
+          return false;
+        }
+        gs.coins -= upgradeCost;
+        existing.level += 1;
+        setSprite(x, z, makeSprite(toolId, existing.level, 2));
+        pulseCoins();
+        floatNumber(`-${upgradeCost}`, x, z, '#b34a3b');
+        playSfx('upgrade');
+        saveSoon();
+        return true;
+      }
+
+      // Otherwise, can only place on empty cell
+      if (existing) {
+        playSfx('bonk');
+        return false;
+      }
+
+      gs.coins -= tool.cost;
+      const now = performance.now();
+      const cell = {
+        tool: toolId,
+        level: 1,
+        plantedAt: now,
+        lastSpawn: now,   // start passive timer from plant
+        ripe: tool.type !== 'crop',  // objects start "active", crops grow
+        stage: tool.type === 'crop' ? 0 : 2,
+      };
+      gs.cells[cellKey(x, z)] = cell;
+      setSprite(x, z, makeSprite(toolId, cell.level, cell.stage));
+      pulseCoins();
+      floatNumber(`-${tool.cost}`, x, z, '#b34a3b');
+      playSfx('place');
+      saveSoon();
+      return true;
+    }
+
+    function eraseAt(x, z) {
+      const c = getCell(x, z);
+      if (!c) {
+        playSfx('bonk');
+        return false;
+      }
+      delete gs.cells[cellKey(x, z)];
+      setSprite(x, z, null);
+      // Remove any unclaimed coins on this cell
+      gs.pickups = gs.pickups.filter(p => {
+        if (p.x === x && p.z === z) {
+          scene.remove(p.mesh);
+          disposeGroup(p.mesh);
+          return false;
+        }
+        return true;
+      });
+      playSfx('place');
+      saveSoon();
+      return true;
+    }
+
+    function harvestAt(x, z) {
+      const c = getCell(x, z);
+      if (!c) return false;
+      const tool = TOOLS.find(t => t.id === c.tool);
+      if (!tool || tool.type !== 'crop') return false;
+      if (c.stage < 2) return false;
+      // Pay out
+      gs.coins += tool.yield;
+      delete gs.cells[cellKey(x, z)];
+      setSprite(x, z, null);
+      pulseCoins();
+      floatNumber(`+${tool.yield}`, x, z, '#b88416');
+      playSfx('harvest');
+      checkUnlocks();
+      saveSoon();
+      return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PICKUPS (floating coins from passive objects)
+    // ─────────────────────────────────────────────────────────────
+    function makeCoinMesh() {
+      const g = new THREE.Group();
+      const disc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.05, 18),
+        M.coin
+      );
+      disc.rotation.x = Math.PI / 2;
+      g.add(disc);
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.16, 0.025, 6, 18),
+        M.coinSide
+      );
+      rim.rotation.x = Math.PI / 2;
+      g.add(rim);
+      g.userData.isPickup = true;
+      return g;
+    }
+
+    function spawnPickup(x, z, yieldAmt) {
+      // Count existing pickups on this cell
+      const existing = gs.pickups.filter(p => p.x === x && p.z === z);
+      if (existing.length >= MAX_COINS_PER_CELL) return;
+      const slot = existing.length;
+      const mesh = makeCoinMesh();
+      mesh.userData.x = x;
+      mesh.userData.z = z;
+      mesh.userData.yieldAmt = yieldAmt;
+      mesh.position.set(worldX(x), 1.0 + slot * 0.18, worldZ(z));
+      scene.add(mesh);
+      gs.pickups.push({ x, z, mesh, born: performance.now(), slot, yieldAmt });
+    }
+
+    function collectPickup(p) {
+      gs.coins += p.yieldAmt;
+      pulseCoins();
+      floatNumber(`+${p.yieldAmt}`, p.x, p.z, '#b88416');
+      scene.remove(p.mesh);
+      disposeGroup(p.mesh);
+      gs.pickups = gs.pickups.filter(q => q !== p);
+      playSfx('coin');
+      checkUnlocks();
+      saveSoon();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TICK (growth + spawning) — only after first interaction
+    // ─────────────────────────────────────────────────────────────
+    function tick(now) {
+      if (!pickupGrowthStarted) return;
+
+      // Crops grow
+      for (const k in gs.cells) {
+        const c = gs.cells[k];
+        const tool = TOOLS.find(t => t.id === c.tool);
+        if (!tool) continue;
+
+        if (tool.type === 'crop' && c.stage < 2) {
+          const elapsed = now - c.plantedAt;
+          const newStage = elapsed >= tool.growMs ? 2 :
+                           elapsed >= tool.growMs * 0.5 ? 1 : 0;
+          if (newStage !== c.stage) {
+            c.stage = newStage;
+            const [x, z] = k.split(',').map(Number);
+            setSprite(x, z, makeSprite(c.tool, c.level, c.stage));
+            if (newStage === 2) {
+              // soft sparkle pulse on ripen
+              const cm = cellMeshes[k];
+              if (cm.sprite) {
+                cm.sprite.userData.glowAt = now;
+              }
+            }
+          }
+        }
+
+        if (tool.type === 'object' && tool.spawnMs) {
+          const interval = tool.spawnMs / c.level; // higher level = faster
+          if (now - c.lastSpawn >= interval) {
+            const [x, z] = k.split(',').map(Number);
+            spawnPickup(x, z, tool.yield * c.level);
+            c.lastSpawn = now;
+          }
+        }
+      }
+
+      // Auto-pickup very old coins
+      for (let i = gs.pickups.length - 1; i >= 0; i--) {
+        if (now - gs.pickups[i].born > COIN_AUTO_PICKUP_MS) {
+          collectPickup(gs.pickups[i]);
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // RAYCAST / INPUT
+    // ─────────────────────────────────────────────────────────────
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+
+    function pickAt(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(ndc, cam);
+
+      // Try pickups first (above tiles)
+      const pickupMeshes = gs.pickups.map(p => p.mesh);
+      if (pickupMeshes.length) {
+        const hits = raycaster.intersectObjects(pickupMeshes, true);
+        if (hits.length) {
+          let g = hits[0].object;
+          while (g && !g.userData.isPickup) g = g.parent;
+          if (g) {
+            const p = gs.pickups.find(q => q.mesh === g);
+            if (p) return { type: 'pickup', pickup: p };
+          }
+        }
+      }
+
+      // Then sprites (so a ripe crop is tappable even when tool selected)
+      const spriteMeshes = [];
+      for (const k in cellMeshes) {
+        const cm = cellMeshes[k];
+        if (cm.sprite) spriteMeshes.push(cm.sprite);
+      }
+      if (spriteMeshes.length) {
+        const sHits = raycaster.intersectObjects(spriteMeshes, true);
+        if (sHits.length) {
+          let g = sHits[0].object;
+          while (g && !g.parent?.isScene && g.parent) {
+            if (g.parent === scene) break;
+            // walk up to cell group
+            for (const k in cellMeshes) {
+              if (cellMeshes[k].sprite === g) {
+                const [x, z] = k.split(',').map(Number);
+                return { type: 'cell', x, z, hasSprite: true };
+              }
+            }
+            g = g.parent;
+          }
+        }
+      }
+
+      // Then tiles
+      const hits = raycaster.intersectObjects(tileMeshes);
+      if (hits.length) {
+        const t = hits[0].object;
+        return { type: 'cell', x: t.userData.x, z: t.userData.z, hasSprite: !!cellMeshes[cellKey(t.userData.x, t.userData.z)].sprite };
+      }
+      return null;
+    }
+
+    function onPointer(e) {
+      // Ignore if touch is on dock (handled by dock children)
+      if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
+      if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
+
+      kickStart();
+
+      const hit = pickAt(e.clientX, e.clientY);
+      if (!hit) return;
+
+      hideHint();
+
+      if (hit.type === 'pickup') {
+        collectPickup(hit.pickup);
+        return;
+      }
+
+      // hit.type === 'cell'
+      const c = getCell(hit.x, hit.z);
+
+      // Ripe crop always harvestable on tap
+      if (c) {
+        const tool = TOOLS.find(t => t.id === c.tool);
+        if (tool && tool.type === 'crop' && c.stage === 2) {
+          harvestAt(hit.x, hit.z);
+          return;
+        }
+      }
+
+      // Erase mode
+      if (selectedTool === 'erase') {
+        eraseAt(hit.x, hit.z);
+        return;
+      }
+
+      // Place / upgrade
+      if (selectedTool) {
+        placeAt(hit.x, hit.z, selectedTool);
+      }
+    }
+
+    canvas.addEventListener('pointerdown', onPointer);
+
+    // ─────────────────────────────────────────────────────────────
+    // DOCK UI
+    // ─────────────────────────────────────────────────────────────
+    const dockEl = document.getElementById('dock');
+
+    function renderDock() {
+      dockEl.innerHTML = '';
+      for (const tool of TOOLS) {
+        const div = document.createElement('div');
+        div.className = 'tool';
+        div.dataset.tool = tool.id;
+        const unlocked = gs.coins >= tool.unlock || hasEverHadEnough(tool.id);
+        if (!unlocked) div.classList.add('locked');
+        if (tool.type !== 'erase' && unlocked && gs.coins < tool.cost) div.classList.add('cant-afford');
+        if (selectedTool === tool.id) div.classList.add('selected');
+        const glyph = document.createElement('div');
+        glyph.className = 'glyph';
+        glyph.textContent = tool.glyph;
+        div.appendChild(glyph);
+        const cost = document.createElement('div');
+        cost.className = 'cost';
+        if (tool.type === 'erase') {
+          cost.textContent = 'remove';
+        } else if (!unlocked) {
+          cost.innerHTML = `<span class="dot"></span>${tool.unlock}`;
+        } else {
+          cost.innerHTML = `<span class="dot"></span>${tool.cost}`;
+        }
+        div.appendChild(cost);
+        div.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          kickStart();
+          if (!unlocked) {
+            showToast(`Unlock at ${tool.unlock} coins`);
+            return;
+          }
+          selectedTool = (selectedTool === tool.id) ? null : tool.id;
+          renderDock();
+          hideHint();
+        });
+        dockEl.appendChild(div);
+      }
+    }
+
+    function hasEverHadEnough(toolId) {
+      // Once unlocked, stays unlocked even if coins drop
+      return !!gs.seenUnlocks[toolId];
+    }
+
+    function checkUnlocks() {
+      for (const tool of TOOLS) {
+        if (tool.unlock > 0 && !gs.seenUnlocks[tool.id] && gs.coins >= tool.unlock) {
+          gs.seenUnlocks[tool.id] = true;
+          showToast(`${tool.glyph}  ${tool.name} unlocked!`, true);
+          playSfx('unlock');
+        }
+      }
+      renderDock();
+    }
+
+    function updateCoinUI() {
+      document.getElementById('coin-count').textContent = gs.coins;
+      // Re-render dock so "cant-afford" updates
+      renderDock();
+    }
+
+    function pulseCoins() {
+      updateCoinUI();
+      const pill = document.getElementById('coin-pill');
+      pill.classList.remove('pulse');
+      void pill.offsetWidth;
+      pill.classList.add('pulse');
+    }
+
+    function flashCantAfford(cost) {
+      showToast('Need more coins');
+      playSfx('bonk');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TOAST + FLOAT NUMBER
+    // ─────────────────────────────────────────────────────────────
+    function showToast(text, unlock) {
+      const t = document.createElement('div');
+      t.className = 'toast-bubble' + (unlock ? ' unlock' : '');
+      t.textContent = text;
+      document.getElementById('toast').appendChild(t);
+      setTimeout(() => t.remove(), 2400);
+    }
+
+    const _floatV3 = new THREE.Vector3();
+    function floatNumber(text, x, z, color) {
+      _floatV3.set(worldX(x), 0.8, worldZ(z));
+      _floatV3.project(cam);
+      const rect = canvas.getBoundingClientRect();
+      const sx = ( _floatV3.x + 1) / 2 * rect.width + rect.left;
+      const sy = (-_floatV3.y + 1) / 2 * rect.height + rect.top;
+      const el = document.createElement('div');
+      el.className = 'float-num';
+      el.textContent = text;
+      el.style.left = sx + 'px';
+      el.style.top = sy + 'px';
+      if (color) el.style.color = color;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 900);
+    }
+
+    function hideHint() {
+      if (gs.hintShown) {
+        document.getElementById('hint').classList.add('hide');
+        gs.hintShown = false;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CAMERA / RESIZE
+    // ─────────────────────────────────────────────────────────────
+    function resize() {
+      const W = window.innerWidth, H = window.innerHeight;
+      renderer.setSize(W, H, false);
+      const aspect = W / H;
+      // Aim: island roughly fills middle, dock has room
+      const viewH = 5.6 / camZoom;
+      const viewW = viewH * aspect;
+      cam.left = -viewW;
+      cam.right = viewW;
+      cam.top = viewH;
+      cam.bottom = -viewH;
+      cam.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ─────────────────────────────────────────────────────────────
+    // RENDER LOOP
+    // ─────────────────────────────────────────────────────────────
+    let lastDraw = 0;
+    const FRAME_MS = 1000 / 60;
+    function frame(now) {
+      requestAnimationFrame(frame);
+      if (now - lastDraw < FRAME_MS - 1) return;
+      lastDraw = now;
+
+      // Drop-in animation on sprites
+      for (const k in cellMeshes) {
+        const sp = cellMeshes[k].sprite;
+        if (sp && sp.userData.dropAt) {
+          const t = (now - sp.userData.dropAt) / 320;
+          if (t >= 1) {
+            sp.position.y = 0.36;
+            sp.userData.dropAt = 0;
+          } else {
+            const e = 1 - Math.pow(1 - t, 3);
+            sp.position.y = 0.36 + (1 - e) * sp.userData.dropFrom;
+            sp.scale.setScalar(0.7 + 0.3 * e);
+          }
+        }
+        // glow pulse on ripen
+        if (sp && sp.userData.glowAt) {
+          const t = (now - sp.userData.glowAt) / 500;
+          if (t >= 1) sp.userData.glowAt = 0;
+          else {
+            const e = Math.sin(t * Math.PI);
+            sp.scale.setScalar(1 + 0.08 * e);
+          }
+        }
+      }
+
+      // Pickup bob + spin
+      for (const p of gs.pickups) {
+        const t = (now - p.born) / 1000;
+        p.mesh.position.y = 1.0 + p.slot * 0.18 + Math.sin(t * 2.4) * 0.08;
+        p.mesh.rotation.y = t * 1.6;
+      }
+
+      // Tick growth/spawning
+      tick(now);
+
+      // Gentle camera bob (bounded, looping)
+      cam.position.x = 11 + Math.sin(now / 4000) * 0.12;
+      cam.position.z = 11 + Math.cos(now / 4500) * 0.1;
+      cam.lookAt(0, 0, 0);
+
+      renderer.render(scene, cam);
+    }
+    requestAnimationFrame(frame);
+
+    // ─────────────────────────────────────────────────────────────
+    // AUDIO (lazy, preload-safe, swell ambient)
+    // ─────────────────────────────────────────────────────────────
+    let actx = null;
+    let masterGain = null;
+    let ambientStarted = false;
+    let noiseBuffer = null;
+
+    function ensureAudio() {
+      if (actx) return;
+      try {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = actx.createGain();
+        masterGain.gain.value = 0.6;
+        masterGain.connect(actx.destination);
+        // Pre-allocate noise buffer once
+        const len = actx.sampleRate * 1.5;
+        noiseBuffer = actx.createBuffer(1, len, actx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+      } catch (e) { actx = null; }
+    }
+
+    function startAmbient() {
+      if (ambientStarted || !actx) return;
+      ambientStarted = true;
+      scheduleSwell();
+    }
+
+    function scheduleSwell() {
+      if (!actx) return;
+      const ctx = actx;
+      const rise = 5 + Math.random() * 3;   // 5-8s
+      const hold = 8 + Math.random() * 8;   // 8-16s
+      const fall = 6 + Math.random() * 4;   // 6-10s
+      const silence = 7 + Math.random() * 9;// 7-16s
+      const total = rise + hold + fall;
+
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(masterGain);
+
+      // Two slow oscillators a fifth apart, slightly detuned, low-pass
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      o1.type = 'sine'; o2.type = 'sine';
+      // pick a root C3 / G3
+      const roots = [130.81, 146.83, 164.81, 174.61, 196.00];
+      const base = roots[Math.floor(Math.random() * roots.length)];
+      o1.frequency.value = base;
+      o2.frequency.value = base * 1.5 * (1 + (Math.random() - 0.5) * 0.005);
+
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 800;
+
+      o1.connect(lp);
+      o2.connect(lp);
+      lp.connect(gain);
+
+      const t0 = ctx.currentTime;
+      const peak = 0.18 + Math.random() * 0.06;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + rise);
+      gain.gain.setValueAtTime(peak, t0 + rise + hold);
+      gain.gain.linearRampToValueAtTime(0, t0 + total);
+
+      o1.start(t0);
+      o2.start(t0);
+      o1.stop(t0 + total + 0.05);
+      o2.stop(t0 + total + 0.05);
+
+      setTimeout(scheduleSwell, (total + silence) * 1000);
+    }
+
+    function playSfx(kind) {
+      if (!actx) return;
+      const ctx = actx;
+      const t = ctx.currentTime;
+      if (kind === 'place') {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(420, t);
+        o.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.22);
+      } else if (kind === 'harvest') {
+        playChime([523.25, 659.25, 783.99], 0.06, 0.22);
+      } else if (kind === 'coin') {
+        playChime([880, 1108.73], 0.04, 0.15);
+      } else if (kind === 'upgrade') {
+        playChime([392, 587.33, 783.99, 1046.5], 0.07, 0.28);
+      } else if (kind === 'unlock') {
+        playChime([523.25, 659.25, 783.99, 1046.5], 0.1, 0.35);
+      } else if (kind === 'bonk') {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.value = 110;
+        g.gain.setValueAtTime(0.07, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.13);
+      }
+    }
+
+    function playChime(notes, stagger, fade) {
+      if (!actx) return;
+      const ctx = actx;
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq;
+        const t = ctx.currentTime + i * stagger;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + fade);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + fade + 0.05);
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // BOOT / FIRST INTERACTION GATE
+    // ─────────────────────────────────────────────────────────────
+    function kickStart() {
+      if (started) return;
+      started = true;
+      ensureAudio();
+      if (actx && actx.state !== 'running') {
+        actx.resume();
+      }
+      // Delay ambient start ≥500ms after first interaction (iOS audio thread safety)
+      setTimeout(() => {
+        if (actx && actx.state === 'running') startAmbient();
+      }, 700);
+      pickupGrowthStarted = true;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SAVE / LOAD
+    // ─────────────────────────────────────────────────────────────
+    let saveTimer = null;
+    function saveSoon() {
+      if (saveTimer) return;
+      saveTimer = setTimeout(() => { saveTimer = null; writeSave(); }, 400);
+    }
+
+    function writeSave() {
+      try {
+        const data = {
+          coins: gs.coins,
+          cells: {},
+          seenUnlocks: gs.seenUnlocks,
+        };
+        for (const k in gs.cells) {
+          const c = gs.cells[k];
+          data.cells[k] = {
+            tool: c.tool,
+            level: c.level,
+            plantedAt: c.plantedAt - performance.now(), // store relative
+            stage: c.stage,
+            // lastSpawn becomes "now" on resume — keeps preload safe (no instant flood)
+          };
+        }
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      } catch {}
+    }
+
+    function eraseSave() {
+      try { localStorage.removeItem(SAVE_KEY); } catch {}
+    }
+
+    function readSave() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (typeof data.coins !== 'number') return null;
+        return data;
+      } catch { return null; }
+    }
+
+    function applySave(data) {
+      gs.coins = data.coins || 0;
+      gs.seenUnlocks = data.seenUnlocks || {};
+      const now = performance.now();
+      for (const k in (data.cells || {})) {
+        const sc = data.cells[k];
+        const [x, z] = k.split(',').map(Number);
+        const tool = TOOLS.find(t => t.id === sc.tool);
+        if (!tool) continue;
+        const cell = {
+          tool: sc.tool,
+          level: sc.level || 1,
+          plantedAt: now + (sc.plantedAt || 0),
+          lastSpawn: now,
+          stage: typeof sc.stage === 'number' ? sc.stage : (tool.type === 'crop' ? 0 : 2),
+          ripe: tool.type !== 'crop',
+        };
+        gs.cells[k] = cell;
+        // Recompute stage based on elapsed (for re-opens within session)
+        if (tool.type === 'crop' && cell.stage < 2) {
+          const elapsed = now - cell.plantedAt;
+          if (elapsed >= tool.growMs) cell.stage = 2;
+          else if (elapsed >= tool.growMs * 0.5) cell.stage = 1;
+        }
+        setSprite(x, z, makeSprite(cell.tool, cell.level, cell.stage));
+      }
+      updateCoinUI();
+    }
+
+    // Save on page hide too
+    window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeSave(); });
+    window.addEventListener('pagehide', writeSave);
+
+    // ─────────────────────────────────────────────────────────────
+    // RESUME DIALOG / INIT (TDZ-safe: this runs after everything above)
+    // ─────────────────────────────────────────────────────────────
+    (function init() {
+      const saved = readSave();
+      const hasMeaningful = saved && (saved.coins !== STARTING_COINS || Object.keys(saved.cells || {}).length > 0);
+      renderDock();
+      updateCoinUI();
+      if (hasMeaningful) {
+        const overlay = document.getElementById('resume-overlay');
+        const total = Object.keys(saved.cells || {}).length;
+        document.getElementById('resume-sub').textContent =
+          `${saved.coins} 🪙 · ${total} tiles planted`;
+        overlay.classList.add('show');
+        document.getElementById('resume-yes').addEventListener('pointerdown', () => {
+          applySave(saved);
+          overlay.classList.remove('show');
+        }, { once: true });
+        document.getElementById('resume-no').addEventListener('pointerdown', () => {
+          eraseSave();
+          overlay.classList.remove('show');
+        }, { once: true });
+      }
+    })();
+
+  })();
+  </script>
+</body>
+</html>
