@@ -358,9 +358,12 @@
     scene.background = new THREE.Color(0xf4ede0);
     scene.fog = new THREE.Fog(0xf4ede0, 24, 46);
 
-    // Camera — fixed isometric
+    // Camera — orthographic isometric, draggable yaw
+    const CAM_DIST = Math.sqrt(11 * 11 + 11 * 11); // horizontal radius
+    const CAM_HEIGHT = 11;
+    let camYaw = Math.PI / 4; // initial 45° (looking from +x+z corner)
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    cam.position.set(11, 11, 11);
+    cam.position.set(Math.sin(camYaw) * CAM_DIST, CAM_HEIGHT, Math.cos(camYaw) * CAM_DIST);
     cam.lookAt(0, 0, 0);
 
     // Lights — refs kept for TOD modulation
@@ -970,18 +973,56 @@
       return null;
     }
 
-    function onTap(e) {
-      if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
-      if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
-      kickStart();
+    // Tap = place, drag = rotate. 8px threshold to distinguish.
+    const DRAG_THRESHOLD = 8;
+    let pointerStart = null;
+    let isDragging = false;
+
+    function doTap(clientX, clientY) {
       cam.updateMatrixWorld(true);
-      const hit = pickAt(e.clientX, e.clientY);
+      const hit = pickAt(clientX, clientY);
       if (!hit) return;
       hideHint();
       if (selectedTool === 'erase') { eraseAt(hit.x, hit.z); return; }
       if (selectedTool) placeAt(hit.x, hit.z, selectedTool);
     }
-    canvas.addEventListener('pointerdown', onTap);
+
+    function onPointerDown(e) {
+      if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
+      if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
+      kickStart();
+      pointerStart = { x: e.clientX, y: e.clientY, yaw0: camYaw };
+      isDragging = false;
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
+    }
+    function onPointerMove(e) {
+      if (!pointerStart) return;
+      const dx = e.clientX - pointerStart.x;
+      const dy = e.clientY - pointerStart.y;
+      if (!isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        hideHint();
+      }
+      if (isDragging) {
+        // Drag right → world rotates so right side comes toward viewer
+        // (camera goes clockwise from above)
+        camYaw = pointerStart.yaw0 - dx * 0.006;
+      }
+    }
+    function onPointerUp(e) {
+      if (!pointerStart) return;
+      const wasDragging = isDragging;
+      const sx = pointerStart.x, sy = pointerStart.y;
+      pointerStart = null;
+      isDragging = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      if (wasDragging) return;
+      doTap(e.clientX || sx, e.clientY || sy);
+    }
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
     // ─────────────────────────────────────────────────────────────
     // DOCK
@@ -1221,6 +1262,13 @@
           c.position.z = (Math.random() - 0.5) * CLOUD_RANGE;
         }
       }
+
+      // Camera orbit (drag-driven) + tiny ambient bob
+      const yaw = camYaw + Math.sin(now / 6000) * 0.003;
+      cam.position.x = Math.sin(yaw) * CAM_DIST;
+      cam.position.z = Math.cos(yaw) * CAM_DIST;
+      cam.position.y = CAM_HEIGHT + Math.sin(now / 4500) * 0.08;
+      cam.lookAt(0, 0, 0);
 
       renderer.render(scene, cam);
     }
