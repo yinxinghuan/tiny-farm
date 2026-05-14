@@ -7,12 +7,9 @@
 <style>
   :root {
     color-scheme: light;
-    --sky-top: #fde9c4;
-    --sky-bot: #b9e6f5;
-    --coin: #f4c641;
-    --coin-shadow: #b88416;
+    --sky: #f4ede0;
     --ink: #2e2a1f;
-    --dock-bg: rgba(255, 250, 238, 0.86);
+    --dock-bg: rgba(255, 250, 238, 0.92);
     --dock-border: rgba(50, 40, 20, 0.12);
     --dock-shadow: 0 -8px 24px rgba(50, 40, 20, 0.08);
   }
@@ -21,7 +18,7 @@
     margin: 0; padding: 0;
     width: 100%; height: 100%;
     overflow: hidden;
-    background: #b9e6f5;
+    background: var(--sky);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     color: var(--ink);
     -webkit-tap-highlight-color: transparent;
@@ -33,54 +30,11 @@
     border-radius: 24px;
     overflow: hidden;
   }
-  #sky {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, var(--sky-top) 0%, #ffd8a8 35%, #ffeac1 55%, var(--sky-bot) 100%);
-    z-index: 0;
-  }
   canvas#canvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     z-index: 1;
     touch-action: none;
-  }
-
-  /* HUD top */
-  #hud {
-    position: absolute;
-    top: max(14px, env(safe-area-inset-top));
-    right: 14px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    pointer-events: none;
-  }
-  #coin-pill {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(255, 250, 238, 0.92);
-    border: 1px solid rgba(184, 132, 22, 0.25);
-    border-radius: 999px;
-    padding: 6px 14px 6px 8px;
-    box-shadow: 0 4px 12px rgba(50, 40, 20, 0.1);
-    font-weight: 800;
-    color: var(--ink);
-    font-size: 16px;
-    line-height: 1;
-    pointer-events: auto;
-  }
-  #coin-pill .icon {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ffe79a, var(--coin) 60%, var(--coin-shadow));
-    box-shadow: inset 0 -2px 0 rgba(184, 132, 22, 0.35);
-    display: inline-block;
-  }
-  #coin-pill.pulse { animation: coinpop 0.36s ease-out; }
-  @keyframes coinpop {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.18); }
-    100% { transform: scale(1); }
   }
 
   /* Top-left hint */
@@ -89,15 +43,15 @@
     top: max(14px, env(safe-area-inset-top));
     left: 14px;
     z-index: 20;
-    background: rgba(255, 250, 238, 0.86);
-    border: 1px solid rgba(50, 40, 20, 0.12);
+    background: rgba(255, 250, 238, 0.82);
+    border: 1px solid rgba(50, 40, 20, 0.1);
     border-radius: 14px;
     padding: 8px 12px;
     font-size: 12px;
     font-weight: 600;
     color: var(--ink);
-    opacity: 0.85;
-    max-width: 50vw;
+    opacity: 0.75;
+    max-width: 60vw;
     pointer-events: none;
     transition: opacity 0.4s ease;
   }
@@ -120,78 +74,57 @@
     border: 1px solid var(--dock-border);
     border-radius: 22px;
     padding: 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     box-shadow: var(--dock-shadow);
     pointer-events: auto;
-    touch-action: pan-x;
-    max-width: 92vw;
-    scroll-snap-type: x proximity;
+    touch-action: none;
   }
-  #dock::-webkit-scrollbar { display: none; }
   .tool {
     flex: 0 0 auto;
     width: 60px;
     height: 70px;
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.55);
     border: 2px solid transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 4px;
     cursor: pointer;
     transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease;
-    scroll-snap-align: center;
     position: relative;
   }
   .tool .glyph {
-    width: 32px; height: 32px;
+    width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.14));
   }
   .tool .glyph svg { width: 100%; height: 100%; display: block; }
-  .tool .cost {
-    font-size: 11px;
+  .tool .lbl {
+    font-size: 10px;
     font-weight: 700;
     color: var(--ink);
-    display: flex; align-items: center; gap: 3px;
     opacity: 0.78;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
-  .tool .cost .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ffe79a, var(--coin) 60%, var(--coin-shadow));
-  }
-  .tool .cost .lock-mini {
-    width: 11px; height: 11px;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .tool .cost .lock-mini svg { width: 100%; height: 100%; display: block; }
-  .tool.locked {
-    opacity: 0.5;
-    filter: saturate(0.55);
-  }
-  .tool.locked .glyph { filter: none; }
-  .tool:not(.locked):active { transform: scale(0.94); }
+  .tool:active { transform: scale(0.94); }
   .tool.selected {
     background: rgba(255, 235, 170, 0.95);
     border-color: rgba(244, 198, 65, 0.7);
     box-shadow: 0 4px 12px rgba(244, 198, 65, 0.4);
   }
-  .tool.cant-afford .cost { color: #b34a3b; }
 
   /* Watermark */
   #watermark {
     position: absolute;
     left: 10px;
     bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
-    width: 64px;
+    width: 60px;
     height: auto;
-    opacity: 0.55;
+    opacity: 0.5;
     z-index: 18;
     pointer-events: none;
   }
@@ -213,17 +146,12 @@
     background: rgba(255, 250, 238, 0.97);
     color: var(--ink);
     border-radius: 16px;
-    padding: 10px 18px;
-    font-weight: 700;
-    font-size: 14px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 13px;
     border: 1px solid rgba(50, 40, 20, 0.12);
     box-shadow: 0 6px 20px rgba(50, 40, 20, 0.18);
-    animation: toast-in 0.42s cubic-bezier(.34,1.56,.64,1) both, toast-out 0.5s ease 1.8s forwards;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .toast-bubble.unlock {
-    background: linear-gradient(135deg, #fff6df, #ffe9a3);
-    border-color: rgba(244, 198, 65, 0.6);
+    animation: toast-in 0.42s cubic-bezier(.34,1.56,.64,1) both, toast-out 0.5s ease 1.4s forwards;
   }
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(-12px) scale(0.92); }
@@ -231,23 +159,6 @@
   }
   @keyframes toast-out {
     to { opacity: 0; transform: translateY(-8px) scale(0.96); }
-  }
-
-  /* Floating +N when coin gained */
-  .float-num {
-    position: absolute;
-    pointer-events: none;
-    font-weight: 800;
-    font-size: 14px;
-    color: var(--coin-shadow);
-    text-shadow: 0 1px 0 #fff, 0 0 6px rgba(255,255,255,0.7);
-    z-index: 22;
-    animation: floatup 0.85s ease-out forwards;
-  }
-  @keyframes floatup {
-    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
-    18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.05); }
-    100% { opacity: 0; transform: translate(-50%, -36px) scale(1); }
   }
 
   /* Resume dialog */
@@ -267,27 +178,10 @@
     border-radius: 22px;
     padding: 26px 22px 20px;
     text-align: center;
-    animation: panel-in 0.3s cubic-bezier(.34,1.4,.64,1);
     box-shadow: 0 16px 40px rgba(0,0,0,0.28);
-  }
-  @keyframes panel-in {
-    from { opacity: 0; transform: translateY(14px) scale(0.96); }
-    to { opacity: 1; transform: none; }
   }
   .resume-panel .ico { width: 56px; height: 56px; margin: 0 auto 10px; }
   .resume-panel .ico svg { width: 100%; height: 100%; display: block; }
-  .resume-panel .resume-coin {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 14px; height: 14px; vertical-align: -2px;
-  }
-  .resume-panel .resume-coin svg { width: 100%; height: 100%; display: block; }
-  .toast-bubble .toast-ico {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-  .toast-bubble .toast-ico svg { width: 100%; height: 100%; display: block; }
   .resume-panel h2 { margin: 0 0 6px; font-size: 16px; }
   .resume-panel p  { margin: 0 0 18px; font-size: 12px; color: #8a7a55; }
   .resume-panel button {
@@ -312,14 +206,9 @@
 </style>
 </head>
 <body>
-  <div id="sky"></div>
   <canvas id="canvas"></canvas>
 
-  <div id="hint">tap a seed below, then a tile</div>
-
-  <div id="hud">
-    <div id="coin-pill"><span class="icon"></span><span id="coin-count">0</span></div>
-  </div>
+  <div id="hint">pick a tool below, then tap a tile</div>
 
   <img id="watermark" src="img/aigram.svg" alt="">
 
@@ -331,7 +220,7 @@
     <div class="resume-panel">
       <div class="ico" id="resume-ico"></div>
       <h2>Welcome back to your farm</h2>
-      <p id="resume-sub">Your progress is saved</p>
+      <p id="resume-sub">Your layout is saved</p>
       <button class="yes" id="resume-yes">Continue</button>
       <button class="no" id="resume-no">Start fresh</button>
     </div>
@@ -343,208 +232,213 @@
     'use strict';
 
     // ─────────────────────────────────────────────────────────────
-    // CONSTANTS / CONFIG
+    // CONFIG
     // ─────────────────────────────────────────────────────────────
     const GRID = 8;
     const TILE = 1;
-    const SAVE_KEY = 'tiny_farm_v1_save';
-    const MAX_COINS_PER_CELL = 3;
-    const COIN_AUTO_PICKUP_MS = 45000;
-    const STARTING_COINS = 3;
+    const SAVE_KEY = 'tiny_farm_v3_save';
+    const MAX_LEVEL = 6;
 
-    // SVG icons (no emoji). 32x32 viewBox, filled shapes.
+    // Tools — pure sandbox, 5 buttons, no costs
     const ICONS = {
-      wheat:     '<svg viewBox="0 0 32 32"><rect x="14.5" y="13" width="3" height="16" rx="1" fill="#7a5a1f"/><ellipse cx="16" cy="6"  rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="10.5" cy="11" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="21.5" cy="11" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="10.5" cy="17" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="21.5" cy="17" rx="3.2" ry="4" fill="#efc44d"/></svg>',
-      tree:      '<svg viewBox="0 0 32 32"><rect x="14" y="20" width="4" height="10" rx="0.8" fill="#6b4322"/><circle cx="16" cy="13" r="9" fill="#4ea050"/><circle cx="11.5" cy="9.5" r="3.2" fill="#5fb35f"/></svg>',
-      corn:      '<svg viewBox="0 0 32 32"><path d="M16 7 L11 11 L13 18 L16 14 Z" fill="#5b8e2e"/><path d="M16 7 L21 11 L19 18 L16 14 Z" fill="#5b8e2e"/><ellipse cx="16" cy="21" rx="5" ry="9" fill="#f7d04a"/><circle cx="14" cy="18" r="1.1" fill="#d4a82a"/><circle cx="18" cy="18" r="1.1" fill="#d4a82a"/><circle cx="14" cy="22" r="1.1" fill="#d4a82a"/><circle cx="18" cy="22" r="1.1" fill="#d4a82a"/><circle cx="16" cy="26" r="1.1" fill="#d4a82a"/></svg>',
-      flower:    '<svg viewBox="0 0 32 32"><rect x="14.5" y="17" width="3" height="13" rx="0.5" fill="#4a7d2c"/><path d="M9 15 Q9 19 14 19 L14 22 L18 22 L18 19 Q23 19 23 15 Q23 7 16 7 Q9 7 9 15 Z" fill="#ff7c9e"/><circle cx="16" cy="13" r="2.4" fill="#ffd84a"/><path d="M11 25 Q7 22 9 19" stroke="#4a7d2c" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
-      cow:       '<svg viewBox="0 0 32 32"><rect x="4" y="13" width="16" height="9" rx="2.2" fill="#fafafa"/><rect x="17" y="9" width="9" height="9" rx="2.2" fill="#fafafa"/><rect x="23" y="12" width="3" height="4" rx="0.6" fill="#f4c3c0"/><rect x="7" y="21" width="2.6" height="6" rx="0.5" fill="#2a2620"/><rect x="14.5" y="21" width="2.6" height="6" rx="0.5" fill="#2a2620"/><ellipse cx="9" cy="17" rx="2.2" ry="1.6" fill="#2a2620"/><ellipse cx="15" cy="18" rx="2.2" ry="1.6" fill="#2a2620"/><circle cx="20" cy="11.5" r="0.9" fill="#2a2620"/><path d="M17 7 L20 9 L17 11 Z" fill="#2a2620"/></svg>',
-      sunflower: '<svg viewBox="0 0 32 32"><rect x="14.5" y="16" width="3" height="14" rx="0.5" fill="#4a7d2c"/><path d="M16 2 L18 8 L16 11 L14 8 Z M30 16 L24 14 L21 16 L24 18 Z M16 30 Q14 26 16 23 L18 26 Z M2 16 L8 14 L11 16 L8 18 Z M26 6 L21 9 L20 13 L24 10 Z M6 6 L11 9 L12 13 L8 10 Z M26 26 L21 23 L20 19 L24 22 Z M6 26 L11 23 L12 19 L8 22 Z" fill="#f6c12c"/><circle cx="16" cy="14" r="4.8" fill="#6b3f10"/><circle cx="6" cy="22" r="2.4" fill="#5fb35f"/></svg>',
-      house:     '<svg viewBox="0 0 32 32"><path d="M4 15 L16 5 L28 15 L28 28 L4 28 Z" fill="#f2e1bf"/><path d="M2 16 L16 4 L30 16 L28 17 L16 7 L4 17 Z" fill="#c25b3a"/><rect x="14" y="20" width="4" height="8" rx="0.4" fill="#5a3a1f"/><rect x="19" y="18" width="5" height="5" fill="#8ed3ff"/><rect x="20.5" y="18" width="0.7" height="5" fill="#f2e1bf"/><rect x="19" y="20.3" width="5" height="0.7" fill="#f2e1bf"/></svg>',
-      pumpkin:   '<svg viewBox="0 0 32 32"><ellipse cx="7" cy="20" rx="4" ry="6" fill="#ea7d2b"/><ellipse cx="25" cy="20" rx="4" ry="6" fill="#ea7d2b"/><ellipse cx="16" cy="20" rx="9" ry="7" fill="#f29040"/><rect x="14.5" y="6" width="3" height="6" rx="0.6" fill="#4a7d2c"/><path d="M18 8 Q22 6 23 10" stroke="#4a7d2c" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
-      apple:     '<svg viewBox="0 0 32 32"><rect x="14" y="21" width="4" height="9" rx="0.5" fill="#6b4322"/><circle cx="16" cy="13" r="9" fill="#4ea050"/><circle cx="11.5" cy="9.5" r="3" fill="#5fb35f"/><circle cx="20.5" cy="9.5" r="3" fill="#5fb35f"/><circle cx="11" cy="16" r="1.9" fill="#c63838"/><circle cx="20" cy="11" r="1.9" fill="#c63838"/><circle cx="18" cy="17" r="1.9" fill="#c63838"/></svg>',
-      erase:     '<svg viewBox="0 0 32 32"><path d="M20 5 L27 12 L13 26 L4 26 L4 17 Z" fill="#d4c4a8"/><path d="M16 9 L23 16" stroke="#a89880" stroke-width="2" stroke-linecap="round"/><path d="M4 26 L13 26 L4 17 Z" fill="#9a8868"/></svg>',
-      coin:      '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#f4c641"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#b88416" stroke-width="1.4"/><path d="M13 11 L13 21 M13 11 L18 11 Q21 11 21 13.5 Q21 16 18 16 L13 16 M18 16 L21 21" stroke="#b88416" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>',
-      lock:      '<svg viewBox="0 0 32 32"><rect x="6" y="14" width="20" height="14" rx="2" fill="#b9b3a3"/><path d="M10 14 L10 10 Q10 5 16 5 Q22 5 22 10 L22 14" stroke="#8a8475" stroke-width="2.8" fill="none"/><circle cx="16" cy="20" r="2.2" fill="#fffaee"/><rect x="14.8" y="20" width="2.4" height="4" fill="#fffaee"/></svg>',
-      sparkle:   '<svg viewBox="0 0 32 32"><path d="M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z" fill="#f6c12c"/></svg>',
+      tree:   '<svg viewBox="0 0 32 32"><rect x="14" y="20" width="4" height="10" rx="0.8" fill="#6b4322"/><rect x="6" y="10" width="20" height="11" rx="3" fill="#5fab26"/><rect x="9" y="6" width="14" height="9" rx="3" fill="#86d139"/></svg>',
+      flower: '<svg viewBox="0 0 32 32"><rect x="4" y="20" width="24" height="9" rx="3" fill="#5fab26"/><rect x="7" y="15" width="6" height="6" rx="1.4" fill="#ff7c9e"/><rect x="14" y="13" width="6" height="6" rx="1.4" fill="#ffd84a"/><rect x="21" y="16" width="6" height="6" rx="1.4" fill="#9b6cf3"/></svg>',
+      house:  '<svg viewBox="0 0 32 32"><path d="M4 16 L16 6 L28 16 L28 16 L4 16 Z" fill="#2a6dd1"/><rect x="3" y="15" width="26" height="2.4" fill="#1d4d9c"/><rect x="6" y="16" width="20" height="12" rx="1" fill="#f2dfb0"/><rect x="13" y="20" width="6" height="8" rx="0.4" fill="#7a4a2e"/><rect x="8" y="19" width="4" height="4" fill="#2a6dd1"/><rect x="20" y="19" width="4" height="4" fill="#2a6dd1"/><rect x="22" y="10" width="3" height="6" fill="#c9c4ba"/></svg>',
+      water:  '<svg viewBox="0 0 32 32"><rect x="3" y="9" width="26" height="14" rx="2.5" fill="#3a8fcc"/><path d="M5 14 Q9 12 13 14 T21 14 T29 14" stroke="#bbe9ff" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M5 19 Q9 17 13 19 T21 19 T29 19" stroke="#bbe9ff" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+      erase:  '<svg viewBox="0 0 32 32"><path d="M20 5 L27 12 L13 26 L4 26 L4 17 Z" fill="#d4c4a8"/><path d="M16 9 L23 16" stroke="#a89880" stroke-width="2" stroke-linecap="round"/><path d="M4 26 L13 26 L4 17 Z" fill="#9a8868"/></svg>',
     };
 
-    // Tools (order = dock order)
-    // type: 'crop' (grows, harvested once) | 'object' (passive, spawns coins) | 'erase'
-    // level: stack upgrade max
     const TOOLS = [
-      { id: 'wheat',     name: 'Wheat',      cost: 1,  unlock: 0,    type: 'crop',   growMs: 8000,  yield: 2,  maxLevel: 1 },
-      { id: 'tree',      name: 'Tree',       cost: 4,  unlock: 0,    type: 'object', spawnMs: 14000, yield: 1, maxLevel: 3 },
-      { id: 'corn',      name: 'Corn',       cost: 5,  unlock: 12,   type: 'crop',   growMs: 12000, yield: 6,  maxLevel: 1 },
-      { id: 'flower',    name: 'Flower',     cost: 2,  unlock: 25,   type: 'crop',   growMs: 5000,  yield: 2,  maxLevel: 1 },
-      { id: 'cow',       name: 'Cow',        cost: 18, unlock: 60,   type: 'object', spawnMs: 11000, yield: 4, maxLevel: 3 },
-      { id: 'sunflower', name: 'Sunflower',  cost: 12, unlock: 120,  type: 'crop',   growMs: 18000, yield: 14, maxLevel: 1 },
-      { id: 'house',     name: 'House',      cost: 35, unlock: 220,  type: 'object', spawnMs: 13000, yield: 7, maxLevel: 3 },
-      { id: 'pumpkin',   name: 'Pumpkin',    cost: 25, unlock: 380,  type: 'crop',   growMs: 28000, yield: 32, maxLevel: 1 },
-      { id: 'apple',     name: 'Apple Tree', cost: 70, unlock: 700,  type: 'object', spawnMs: 16000, yield: 14, maxLevel: 3 },
-      { id: 'erase',     name: 'Remove',     cost: 0,  unlock: 0,    type: 'erase',  maxLevel: 0 },
+      { id: 'tree',   name: 'Tree' },
+      { id: 'flower', name: 'Bloom' },
+      { id: 'house',  name: 'House' },
+      { id: 'water',  name: 'Water' },
+      { id: 'erase',  name: 'Remove' },
     ];
 
     // ─────────────────────────────────────────────────────────────
     // STATE
     // ─────────────────────────────────────────────────────────────
     const gs = {
-      coins: STARTING_COINS,
-      cells: {},          // 'x,z' → { tool, level, plantedAt, lastSpawn, ripe, stage }
-      pickups: [],        // floating coins: { x, z, mesh, born, slot }
-      seenUnlocks: {},    // toolId → true once toast shown
-      hintShown: true,
+      cells: {},  // 'x,z' → { kind, level, seed }
     };
-
-    let started = false; // true once first user interaction
+    let started = false;
     let selectedTool = null;
-    let pickupGrowthStarted = false;
-
-    // Camera orbit state
-    const CAM_DIST = Math.sqrt(11 * 11 + 11 * 11); // horizontal radius (~15.55)
-    const CAM_HEIGHT = 10.5;
-    let camYaw = Math.PI / 4; // initial 45°
+    let tickStarted = false;
+    let saveTimer = null;
 
     // ─────────────────────────────────────────────────────────────
-    // THREE.JS SCENE
+    // THREE.JS
     // ─────────────────────────────────────────────────────────────
     const canvas = document.getElementById('canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xfde9c4, 22, 42);
+    scene.background = new THREE.Color(0xf4ede0);
+    scene.fog = new THREE.Fog(0xf4ede0, 24, 46);
 
-    // Orthographic isometric camera
-    let camZoom = 1.0;
+    // Camera — fixed isometric
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    cam.position.set(Math.sin(camYaw) * CAM_DIST, CAM_HEIGHT, Math.cos(camYaw) * CAM_DIST);
+    cam.position.set(11, 11, 11);
     cam.lookAt(0, 0, 0);
 
-    // Lights
-    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6a9a4a, 0.85));
-    const sun = new THREE.DirectionalLight(0xfff2c8, 1.05);
-    sun.position.set(7, 12, 5);
+    // Lights — original-style: dim ambient + warm hemi + strong directional
+    scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xb39879, 0.42));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.25);
+    sun.position.set(8, 11, 5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.left = -8;
-    sun.shadow.camera.right = 8;
-    sun.shadow.camera.top = 8;
-    sun.shadow.camera.bottom = -8;
+    sun.shadow.camera.left = -10;
+    sun.shadow.camera.right = 10;
+    sun.shadow.camera.top = 10;
+    sun.shadow.camera.bottom = -10;
     sun.shadow.camera.near = 0.5;
     sun.shadow.camera.far = 40;
-    sun.shadow.bias = -0.0008;
-    sun.shadow.radius = 4;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.02;
+    sun.shadow.radius = 1.4;
     scene.add(sun);
 
-    // Animated water moat around the island
-    const waterGeom = new THREE.PlaneGeometry(32, 32, 24, 24);
-    const waterMat = new THREE.MeshLambertMaterial({ color: 0x7dc6dc });
-    const water = new THREE.Mesh(waterGeom, waterMat);
-    water.rotation.x = -Math.PI / 2;
-    water.position.y = -0.42;
-    water.receiveShadow = true;
-    scene.add(water);
-    // darker deep-water beneath / horizon
-    const deep = new THREE.Mesh(
-      new THREE.CircleGeometry(GRID * 1.7, 48),
-      new THREE.MeshBasicMaterial({ color: 0x4d96b3 })
-    );
-    deep.rotation.x = -Math.PI / 2;
-    deep.position.y = -0.55;
-    scene.add(deep);
-
-    // Ground halo under island
-    {
-      const halo = new THREE.Mesh(
-        new THREE.CircleGeometry(GRID * 0.82, 48),
-        new THREE.MeshBasicMaterial({ color: 0x3a6b2e, transparent: true, opacity: 0.18 })
-      );
-      halo.rotation.x = -Math.PI / 2;
-      halo.position.y = -0.02;
-      scene.add(halo);
+    // ─────────────────────────────────────────────────────────────
+    // GEOMETRY HELPERS
+    // ─────────────────────────────────────────────────────────────
+    const geomCache = new Map();
+    function roundedBox(w, h, d, r = 0.05) {
+      const key = `${w}|${h}|${d}|${r}`;
+      const cached = geomCache.get(key);
+      if (cached) return cached;
+      const shape = new THREE.Shape();
+      const hw = w / 2, hd = d / 2;
+      const rr = Math.min(r, hw - 0.001, hd - 0.001);
+      shape.moveTo(-hw + rr, -hd);
+      shape.lineTo(hw - rr, -hd);
+      shape.quadraticCurveTo(hw, -hd, hw, -hd + rr);
+      shape.lineTo(hw, hd - rr);
+      shape.quadraticCurveTo(hw, hd, hw - rr, hd);
+      shape.lineTo(-hw + rr, hd);
+      shape.quadraticCurveTo(-hw, hd, -hw, hd - rr);
+      shape.lineTo(-hw, -hd + rr);
+      shape.quadraticCurveTo(-hw, -hd, -hw + rr, -hd);
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: h,
+        bevelEnabled: true,
+        bevelSegments: 1,
+        bevelSize: 0.02,
+        bevelThickness: 0.02,
+        curveSegments: 3,
+      });
+      geo.rotateX(-Math.PI / 2);
+      geo.userData.cached = true;
+      geomCache.set(key, geo);
+      return geo;
     }
 
-    // Tile grass colors (warmer, slight variation)
-    const grassMats = [0x8acb5e, 0x86c75a, 0x91d068, 0x82c557].map(c =>
-      new THREE.MeshLambertMaterial({ color: c })
-    );
-    const sideMat = new THREE.MeshLambertMaterial({ color: 0x8a5d34 });
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x6b4624 });
-    const tuftMat = new THREE.MeshLambertMaterial({ color: 0x6fb845 });
+    function castReceive(obj) {
+      obj.traverse(c => {
+        if (c.isMesh) {
+          c.castShadow = true;
+          c.receiveShadow = true;
+        }
+      });
+      return obj;
+    }
 
-    // Pre-built materials cache for sprites
+    function srand(seed) {
+      let s = (seed | 0) || 1;
+      return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 1e5) / 1e5; };
+    }
+
+    function disposeGroup(g) {
+      g.traverse(o => { if (o.geometry && !o.geometry.userData?.cached) o.geometry.dispose(); });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MATERIALS (original palette)
+    // ─────────────────────────────────────────────────────────────
     const M = {
-      trunk:    new THREE.MeshLambertMaterial({ color: 0x6b4322 }),
-      leafA:    new THREE.MeshLambertMaterial({ color: 0x3f8b3f }),
-      leafB:    new THREE.MeshLambertMaterial({ color: 0x4ea050 }),
-      apple:    new THREE.MeshLambertMaterial({ color: 0xc63838 }),
-      wheatStem:new THREE.MeshLambertMaterial({ color: 0x9bbb4a }),
-      wheatRipe:new THREE.MeshLambertMaterial({ color: 0xefc44d, emissive: 0x5b400a, emissiveIntensity: 0.3 }),
-      sprout:   new THREE.MeshLambertMaterial({ color: 0x7ed35a }),
-      cornStem: new THREE.MeshLambertMaterial({ color: 0x5b8e2e }),
-      cornEar:  new THREE.MeshLambertMaterial({ color: 0xf7d04a, emissive: 0x533a06, emissiveIntensity: 0.3 }),
-      petalA:   new THREE.MeshLambertMaterial({ color: 0xff7c9e }),
-      petalB:   new THREE.MeshLambertMaterial({ color: 0xffd84a }),
-      petalC:   new THREE.MeshLambertMaterial({ color: 0x9b6cf3 }),
-      sunfPetal:new THREE.MeshLambertMaterial({ color: 0xf6c12c, emissive: 0x4a3308, emissiveIntensity: 0.25 }),
-      sunfCore: new THREE.MeshLambertMaterial({ color: 0x6b3f10 }),
-      pumpkin:  new THREE.MeshLambertMaterial({ color: 0xea7d2b, emissive: 0x4d1e02, emissiveIntensity: 0.18 }),
-      stemGreen:new THREE.MeshLambertMaterial({ color: 0x4a7d2c }),
-      cowBody:  new THREE.MeshLambertMaterial({ color: 0xfafafa }),
-      cowSpot:  new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
-      cowSnout: new THREE.MeshLambertMaterial({ color: 0xf4c3c0 }),
-      houseWall:new THREE.MeshLambertMaterial({ color: 0xf2e1bf }),
-      houseRoof:new THREE.MeshLambertMaterial({ color: 0xc25b3a }),
-      door:     new THREE.MeshLambertMaterial({ color: 0x5a3a1f }),
-      window:   new THREE.MeshLambertMaterial({ color: 0x8ed3ff, emissive: 0x223344, emissiveIntensity: 0.2 }),
-      coin:     new THREE.MeshLambertMaterial({ color: 0xf4c641, emissive: 0x6b4a0e, emissiveIntensity: 0.5 }),
-      coinSide: new THREE.MeshLambertMaterial({ color: 0xb88416 }),
+      grassTop:  new THREE.MeshLambertMaterial({ color: 0xb0d949 }),
+      grassEdge: new THREE.MeshLambertMaterial({ color: 0x95c138 }),
+      dirt:      new THREE.MeshLambertMaterial({ color: 0x7d4519 }),
+      dirtRich:  new THREE.MeshLambertMaterial({ color: 0x462b15 }),
+
+      water:     new THREE.MeshLambertMaterial({ color: 0x3a8fcc }),
+      waterDk:   new THREE.MeshLambertMaterial({ color: 0x2f77ad }),
+      waterFoam: new THREE.MeshLambertMaterial({ color: 0xbbe9ff, transparent: true, opacity: 0.74 }),
+
+      trunk:     new THREE.MeshLambertMaterial({ color: 0x5c3818 }),
+      leaves:    new THREE.MeshLambertMaterial({ color: 0x86d139 }),
+      leavesDk:  new THREE.MeshLambertMaterial({ color: 0x5fab26 }),
+
+      wallCream: new THREE.MeshLambertMaterial({ color: 0xf2dfb0 }),
+      wallTrim:  new THREE.MeshLambertMaterial({ color: 0xe5cf99 }),
+      roofRed:   new THREE.MeshLambertMaterial({ color: 0xc25b3a }),
+      roofRedD:  new THREE.MeshLambertMaterial({ color: 0x8f3a20 }),
+      roofBlue:  new THREE.MeshLambertMaterial({ color: 0x2a6dd1 }),
+      roofBlueD: new THREE.MeshLambertMaterial({ color: 0x1d4d9c }),
+      door:      new THREE.MeshLambertMaterial({ color: 0x7a4a2e }),
+      windowB:   new THREE.MeshLambertMaterial({ color: 0x2a6dd1 }),
+      chimney:   new THREE.MeshLambertMaterial({ color: 0xc9c4ba }),
+      step:      new THREE.MeshLambertMaterial({ color: 0xa9a49a }),
+      knob:      new THREE.MeshLambertMaterial({ color: 0xe8c050 }),
+
+      bushGreen: new THREE.MeshLambertMaterial({ color: 0x5fab26 }),
+      bushDk:    new THREE.MeshLambertMaterial({ color: 0x4a8f1f }),
+      petalA:    new THREE.MeshLambertMaterial({ color: 0xff7c9e }),
+      petalB:    new THREE.MeshLambertMaterial({ color: 0xffd84a }),
+      petalC:    new THREE.MeshLambertMaterial({ color: 0x9b6cf3 }),
+      petalD:    new THREE.MeshLambertMaterial({ color: 0xffffff }),
+
+      cowWhite:  new THREE.MeshLambertMaterial({ color: 0xfafafa }),
+      cowSpot:   new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
+      cowMuzzle: new THREE.MeshLambertMaterial({ color: 0xf4c3c0 }),
+      hoof:      new THREE.MeshLambertMaterial({ color: 0x2a2620 }),
+
+      smoke:     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }),
     };
 
     // ─────────────────────────────────────────────────────────────
     // GRID / CELLS
     // ─────────────────────────────────────────────────────────────
-    const cellMeshes = {};   // 'x,z' → Three.js group (tile + sprite)
-    const tileMeshes = [];   // for raycasting
-
-    // Permanent homestead cottage cell — visual anchor, blocks placement
-    const HOMESTEAD = { x: 4, z: 4 };
+    const cellMeshes = {};
+    const tileMeshes = [];
+    const HOMESTEAD = { x: 3, z: 4 };
 
     function cellKey(x, z) { return x + ',' + z; }
     function worldX(x) { return (x - (GRID - 1) / 2) * TILE; }
     function worldZ(z) { return (z - (GRID - 1) / 2) * TILE; }
 
-    // Seeded RNG per cell so sprite layout is stable
-    function srand(seed) {
-      let s = seed | 0;
-      return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; };
-    }
-
-    function makeTuft(seed) {
+    function makeTuft(seedX, seedZ) {
+      const rng = srand(seedX * 71 + seedZ * 13 + 3);
       const g = new THREE.Group();
-      const rng = srand(seed * 13 + 9);
       const blades = 2 + Math.floor(rng() * 3);
       for (let i = 0; i < blades; i++) {
-        const h = 0.06 + rng() * 0.10;
-        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, h, 0.05), tuftMat);
+        const h = 0.07 + rng() * 0.09;
+        const blade = new THREE.Mesh(roundedBox(0.05, h, 0.05, 0.018), M.leavesDk);
         blade.position.set((rng() - 0.5) * 0.42, h / 2, (rng() - 0.5) * 0.42);
         blade.rotation.y = rng() * Math.PI;
         blade.castShadow = true;
         g.add(blade);
       }
       g.userData.swayPhase = rng() * Math.PI * 2;
-      g.userData.swayAmount = 0.05;
+      g.userData.swayAmount = 0.04;
       return g;
     }
 
     function buildTile(x, z) {
       const group = new THREE.Group();
-      const tileGeom = new THREE.BoxGeometry(TILE * 0.96, 0.36, TILE * 0.96);
-      const mats = [sideMat, sideMat, grassMats[(x + z * 3) % grassMats.length], dirtMat, sideMat, sideMat];
+      const tileGeom = new THREE.BoxGeometry(TILE * 0.98, 0.36, TILE * 0.98);
+      const mats = [
+        M.grassEdge, M.grassEdge,   // +x, -x
+        M.grassTop,                  // +y
+        M.dirt,                      // -y
+        M.grassEdge, M.grassEdge,   // +z, -z
+      ];
       const tile = new THREE.Mesh(tileGeom, mats);
       tile.position.y = 0.18;
       tile.userData = { isTile: true, x, z };
@@ -553,18 +447,16 @@
       group.position.set(worldX(x), 0, worldZ(z));
       tileMeshes.push(tile);
 
-      // Random grass tuft decoration (skipped on homestead tile)
       let decoration = null;
       const r = srand(x * 31 + z * 7 + 11);
-      if (!(x === HOMESTEAD.x && z === HOMESTEAD.z) && r() < 0.5) {
-        decoration = makeTuft(x * 100 + z);
+      if (!(x === HOMESTEAD.x && z === HOMESTEAD.z) && r() < 0.45) {
+        decoration = makeTuft(x, z);
         decoration.position.y = 0.36;
         group.add(decoration);
       }
       return { group, tile, sprite: null, decoration };
     }
 
-    // Build all 64 tiles
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
         const c = buildTile(x, z);
@@ -574,423 +466,215 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // SPRITE FACTORIES (returns Group anchored at tile center y=0.36 top)
+    // SPRITE FACTORIES (original style — all rounded boxes)
     // ─────────────────────────────────────────────────────────────
 
-    function makeWheat(stage) {
+    function makeTree(level = 1) {
+      const L = Math.max(1, Math.min(MAX_LEVEL, level));
       const g = new THREE.Group();
-      const rng = srand(stage * 31 + 7);
-      const heights = [0.12, 0.32, 0.52];
-      const h = heights[stage];
-      const stemMat = stage < 2 ? M.wheatStem : M.wheatRipe;
-      for (let i = 0; i < 7; i++) {
-        const stalk = new THREE.Mesh(
-          new THREE.BoxGeometry(0.07, h, 0.07),
-          stemMat
-        );
-        stalk.position.set(
-          (rng() - 0.5) * 0.6,
-          h / 2,
-          (rng() - 0.5) * 0.6
-        );
-        g.add(stalk);
-      }
-      if (stage === 2) {
-        const cap = new THREE.Mesh(
-          new THREE.BoxGeometry(0.78, 0.06, 0.78),
-          M.wheatRipe
-        );
-        cap.position.y = h + 0.04;
-        g.add(cap);
-      }
-      return g;
-    }
-
-    function makeCorn(stage) {
-      const g = new THREE.Group();
-      const h = [0.18, 0.45, 0.72][stage];
-      const stemMat = M.cornStem;
-      for (let i = 0; i < 4; i++) {
-        const stem = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.05, 0.06, h, 5),
-          stemMat
-        );
-        const a = (i / 4) * Math.PI * 2;
-        stem.position.set(Math.cos(a) * 0.2, h / 2, Math.sin(a) * 0.2);
-        g.add(stem);
-        if (stage === 2) {
-          const ear = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.07, 0.07, 0.22, 6),
-            M.cornEar
-          );
-          ear.position.set(Math.cos(a) * 0.2, h - 0.18, Math.sin(a) * 0.2);
-          g.add(ear);
-        }
-      }
-      return g;
-    }
-
-    function makeFlower(stage) {
-      const g = new THREE.Group();
-      const colors = [M.petalA, M.petalB, M.petalC];
-      const h = [0.1, 0.22, 0.38][stage];
-      const rng = srand(stage * 17 + 3);
-      for (let i = 0; i < 4; i++) {
-        const stem = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.03, 0.03, h, 5),
-          M.wheatStem
-        );
-        const x = (rng() - 0.5) * 0.5;
-        const z = (rng() - 0.5) * 0.5;
-        stem.position.set(x, h / 2, z);
-        g.add(stem);
-        if (stage === 2) {
-          const head = new THREE.Mesh(
-            new THREE.SphereGeometry(0.09, 8, 6),
-            colors[i % 3]
-          );
-          head.position.set(x, h + 0.04, z);
-          g.add(head);
-        }
-      }
-      return g;
-    }
-
-    function makeSunflower(stage) {
-      const g = new THREE.Group();
-      const h = [0.2, 0.55, 0.88][stage];
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.05, 0.07, h, 6),
-        M.cornStem
-      );
-      stem.position.y = h / 2;
-      g.add(stem);
-      // big leaves
-      if (stage > 0) {
-        for (let i = 0; i < 2; i++) {
-          const leaf = new THREE.Mesh(
-            new THREE.BoxGeometry(0.16, 0.06, 0.32),
-            M.leafA
-          );
-          leaf.position.set(0, h * 0.6, 0);
-          leaf.rotation.y = i * Math.PI;
-          leaf.position.x = i === 0 ? 0.18 : -0.18;
-          g.add(leaf);
-        }
-      }
-      if (stage === 2) {
-        // Disc head
-        const disc = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.26, 0.26, 0.06, 18),
-          M.sunfPetal
-        );
-        disc.position.y = h;
-        disc.rotation.x = -0.18;
-        g.add(disc);
-        const core = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.13, 0.13, 0.07, 12),
-          M.sunfCore
-        );
-        core.position.y = h + 0.02;
-        core.rotation.x = -0.18;
-        g.add(core);
-      }
-      return g;
-    }
-
-    function makePumpkin(stage) {
-      const g = new THREE.Group();
-      const size = [0.14, 0.28, 0.42][stage];
-      const body = new THREE.Mesh(
-        new THREE.SphereGeometry(size, 14, 10),
-        stage === 2 ? M.pumpkin : M.sprout
-      );
-      body.scale.set(1, 0.78, 1);
-      body.position.y = size * 0.78;
-      g.add(body);
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.05, 0.12, 5),
-        M.stemGreen
-      );
-      stem.position.y = size * 1.6;
-      g.add(stem);
-      return g;
-    }
-
-    function makeTree(level) {
-      const g = new THREE.Group();
-      const trunkH = 0.35 + level * 0.08;
-      const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.11, trunkH, 6),
-        M.trunk
-      );
+      const trunkH = 0.48 + (L - 1) * 0.1;
+      const trunkW = 0.18 + (L - 1) * 0.018;
+      const trunk = new THREE.Mesh(new THREE.BoxGeometry(trunkW, trunkH, trunkW), M.trunk);
       trunk.position.y = trunkH / 2;
       g.add(trunk);
-      const crownR = 0.28 + level * 0.08;
-      const crown = new THREE.Mesh(
-        new THREE.SphereGeometry(crownR, 12, 10),
-        M.leafA
-      );
-      crown.position.y = trunkH + crownR * 0.6;
-      g.add(crown);
-      if (level >= 2) {
-        const cap = new THREE.Mesh(
-          new THREE.SphereGeometry(crownR * 0.7, 10, 8),
-          M.leafB
-        );
-        cap.position.y = trunkH + crownR * 1.1;
-        cap.position.x = 0.05;
-        g.add(cap);
+
+      const lowerW = 0.62 + (L - 1) * 0.06;
+      const lowerH = 0.42 + (L - 1) * 0.04;
+      const lower = new THREE.Mesh(roundedBox(lowerW, lowerH, lowerW, 0.09), M.leavesDk);
+      const lowerY = trunkH + lowerH * 0.5 - 0.08;
+      lower.position.y = lowerY;
+      g.add(lower);
+
+      const upperW = 0.44 + (L - 1) * 0.04;
+      const upperH = 0.34 + (L - 1) * 0.03;
+      const upper = new THREE.Mesh(roundedBox(upperW, upperH, upperW, 0.07), M.leaves);
+      const upperY = lowerY + lowerH * 0.5 + upperH * 0.5 - 0.06;
+      upper.position.y = upperY;
+      g.add(upper);
+
+      if (L >= 3) {
+        const crown = new THREE.Mesh(roundedBox(0.30, 0.26, 0.30, 0.06), M.leavesDk);
+        crown.position.y = upperY + upperH * 0.5 + 0.12;
+        g.add(crown);
+      } else {
+        const tip = new THREE.Mesh(roundedBox(0.22, 0.18, 0.22, 0.05), M.leaves);
+        tip.position.y = upperY + upperH * 0.5 + 0.08;
+        g.add(tip);
       }
+      g.userData = { kind: 'tree', swayPhase: Math.random() * Math.PI * 2, swayAmount: 0.025 };
+      castReceive(g);
       return g;
     }
 
-    function makeApple(level) {
+    function makeFlowerPatch(seed) {
+      const rng = srand((seed || 0) * 17 + 23);
       const g = new THREE.Group();
-      const trunkH = 0.38 + level * 0.08;
-      const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.12, trunkH, 6),
-        M.trunk
-      );
-      trunk.position.y = trunkH / 2;
-      g.add(trunk);
-      const crownR = 0.32 + level * 0.08;
-      const crown = new THREE.Mesh(
-        new THREE.SphereGeometry(crownR, 14, 10),
-        M.leafB
-      );
-      crown.position.y = trunkH + crownR * 0.6;
-      g.add(crown);
-      // apples
-      const count = 5 + level * 3;
-      const rng = srand(level * 41 + 13);
+      // bush base (two rounded boxes)
+      const bushW = 0.42;
+      const bushH = 0.18;
+      const bush = new THREE.Mesh(roundedBox(bushW, bushH, bushW, 0.07), M.bushGreen);
+      bush.position.y = bushH / 2;
+      g.add(bush);
+      const bush2 = new THREE.Mesh(roundedBox(bushW * 0.7, bushH * 0.8, bushW * 0.7, 0.06), M.bushDk);
+      bush2.position.set((rng() - 0.5) * 0.12, bushH * 0.6, (rng() - 0.5) * 0.12);
+      g.add(bush2);
+      // flower heads
+      const petals = [M.petalA, M.petalB, M.petalC, M.petalD];
+      const count = 4 + Math.floor(rng() * 3);
       for (let i = 0; i < count; i++) {
-        const a = new THREE.Mesh(
-          new THREE.SphereGeometry(0.06, 8, 6),
-          M.apple
-        );
-        const theta = rng() * Math.PI * 2;
-        const phi = rng() * Math.PI * 0.6 + Math.PI * 0.1;
-        a.position.set(
-          Math.sin(phi) * Math.cos(theta) * crownR,
-          trunkH + crownR * 0.6 + Math.cos(phi) * crownR * 0.7,
-          Math.sin(phi) * Math.sin(theta) * crownR
-        );
-        g.add(a);
+        const a = (i / count) * Math.PI * 2 + rng() * 0.6;
+        const r = 0.10 + rng() * 0.08;
+        const head = new THREE.Mesh(roundedBox(0.085, 0.055, 0.085, 0.025), petals[Math.floor(rng() * petals.length)]);
+        head.position.set(Math.cos(a) * r, bushH + 0.04 + rng() * 0.03, Math.sin(a) * r);
+        g.add(head);
+        const pin = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.05, 0.025), M.bushDk);
+        pin.position.set(Math.cos(a) * r, bushH + 0.02, Math.sin(a) * r);
+        g.add(pin);
       }
+      g.userData = { kind: 'flower', swayPhase: Math.random() * Math.PI * 2, swayAmount: 0.04 };
+      castReceive(g);
       return g;
     }
 
-    function makeCow(level) {
+    function makeHouse(level = 1, palette) {
+      const pal = palette || (Math.random() < 0.5 ? 'red' : 'blue');
+      const roof = pal === 'red' ? M.roofRed : M.roofBlue;
+      const roofD = pal === 'red' ? M.roofRedD : M.roofBlueD;
+      const L = Math.max(1, Math.min(MAX_LEVEL, level));
       const g = new THREE.Group();
-      const scale = 1 + (level - 1) * 0.15;
-      // Body
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5 * scale, 0.3 * scale, 0.3 * scale),
-        M.cowBody
-      );
-      body.position.y = 0.22 * scale;
-      g.add(body);
-      // Head
-      const head = new THREE.Mesh(
-        new THREE.BoxGeometry(0.22 * scale, 0.2 * scale, 0.22 * scale),
-        M.cowBody
-      );
-      head.position.set(0.32 * scale, 0.3 * scale, 0);
-      g.add(head);
-      // Snout
-      const snout = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.14 * scale),
-        M.cowSnout
-      );
-      snout.position.set(0.43 * scale, 0.27 * scale, 0);
-      g.add(snout);
-      // Legs
-      for (let i = 0; i < 4; i++) {
-        const leg = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08 * scale, 0.16 * scale, 0.08 * scale),
-          M.cowSpot
-        );
-        leg.position.set(
-          (i < 2 ? -0.18 : 0.18) * scale,
-          0.07 * scale,
-          (i % 2 === 0 ? -0.1 : 0.1) * scale
-        );
-        g.add(leg);
-      }
-      // Spots
-      const rng = srand(level * 19);
-      const spotCount = 2 + level;
-      for (let i = 0; i < spotCount; i++) {
-        const sp = new THREE.Mesh(
-          new THREE.SphereGeometry(0.06 * scale + rng() * 0.04, 8, 6),
-          M.cowSpot
-        );
-        sp.position.set(
-          (rng() - 0.5) * 0.4 * scale,
-          0.27 * scale + (rng() - 0.5) * 0.1,
-          (rng() < 0.5 ? -0.16 : 0.16) * scale
-        );
-        sp.scale.set(1, 1, 0.5);
-        g.add(sp);
-      }
-      // Ears
-      for (let i = 0; i < 2; i++) {
-        const ear = new THREE.Mesh(
-          new THREE.BoxGeometry(0.07 * scale, 0.07 * scale, 0.04 * scale),
-          M.cowSpot
-        );
-        ear.position.set(0.32 * scale, 0.42 * scale, (i === 0 ? -0.1 : 0.1) * scale);
-        g.add(ear);
-      }
-      return g;
-    }
+      const wallW = 0.68;
+      const wallD = 0.56;
+      const wallH = 0.48 + (L - 1) * 0.16;
 
-    function makeHouse(level) {
-      const g = new THREE.Group();
-      const s = 1 + (level - 1) * 0.18;
-      // walls
-      const wall = new THREE.Mesh(
-        new THREE.BoxGeometry(0.62 * s, 0.5 * s, 0.5 * s),
-        M.houseWall
-      );
-      wall.position.y = 0.25 * s;
-      g.add(wall);
-      // roof (pyramid)
-      const roof = new THREE.Mesh(
-        new THREE.ConeGeometry(0.52 * s, 0.32 * s, 4),
-        M.houseRoof
-      );
-      roof.rotation.y = Math.PI / 4;
-      roof.position.y = 0.5 * s + 0.16 * s;
-      g.add(roof);
+      const walls = new THREE.Mesh(roundedBox(wallW, wallH, wallD, 0.04), M.wallCream);
+      g.add(walls);
+
+      // wall trim band
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(wallW + 0.02, 0.04, wallD + 0.02), M.wallTrim);
+      trim.position.y = wallH * 0.3;
+      g.add(trim);
+
+      // hipped pyramid roof made from 2 stacked rotated boxes (looks chunkier than cone)
+      const roofGroup = new THREE.Group();
+      const roofBase = new THREE.Mesh(new THREE.BoxGeometry(wallW + 0.08, 0.16, wallD + 0.08), roof);
+      roofBase.position.y = wallH + 0.08;
+      roofGroup.add(roofBase);
+      const roofMid = new THREE.Mesh(new THREE.BoxGeometry(wallW * 0.7, 0.12, wallD * 0.7), roof);
+      roofMid.position.y = wallH + 0.22;
+      roofGroup.add(roofMid);
+      const roofTop = new THREE.Mesh(new THREE.BoxGeometry(wallW * 0.35, 0.1, wallD * 0.35), roof);
+      roofTop.position.y = wallH + 0.32;
+      roofGroup.add(roofTop);
+      // eave trim
+      const eave = new THREE.Mesh(new THREE.BoxGeometry(wallW + 0.12, 0.04, wallD + 0.12), roofD);
+      eave.position.y = wallH + 0.02;
+      g.add(eave);
+      g.add(roofGroup);
+
       // door
-      const door = new THREE.Mesh(
-        new THREE.BoxGeometry(0.12 * s, 0.22 * s, 0.04 * s),
-        M.door
-      );
-      door.position.set(0, 0.11 * s, 0.26 * s);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.04), M.door);
+      door.position.set(0, 0.14, wallD / 2 + 0.025);
       g.add(door);
-      // window
-      const win = new THREE.Mesh(
-        new THREE.BoxGeometry(0.12 * s, 0.12 * s, 0.04 * s),
-        M.window
-      );
-      win.position.set(0.18 * s, 0.32 * s, 0.26 * s);
-      g.add(win);
-      if (level >= 2) {
-        const win2 = win.clone();
-        win2.position.x = -0.18 * s;
-        g.add(win2);
-      }
-      // chimney
-      if (level >= 2) {
-        const chim = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.08 * s),
-          M.houseRoof
-        );
-        chim.position.set(-0.18 * s, 0.62 * s, -0.08 * s);
-        g.add(chim);
-      }
-      return g;
-    }
+      const knob = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), M.knob);
+      knob.position.set(0.06, 0.16, wallD / 2 + 0.05);
+      g.add(knob);
+      const step = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.08), M.step);
+      step.position.set(0, 0.02, wallD / 2 + 0.075);
+      g.add(step);
 
-    function makeSprite(toolId, level, stage) {
-      let g;
-      switch (toolId) {
-        case 'wheat':     g = makeWheat(stage); break;
-        case 'corn':      g = makeCorn(stage); break;
-        case 'flower':    g = makeFlower(stage); break;
-        case 'sunflower': g = makeSunflower(stage); break;
-        case 'pumpkin':   g = makePumpkin(stage); break;
-        case 'tree':      g = makeTree(level); break;
-        case 'apple':     g = makeApple(level); break;
-        case 'cow':       g = makeCow(level); break;
-        case 'house':     g = makeHouse(level); break;
-        default: g = new THREE.Group();
-      }
-      // Enable shadow casting on all meshes
-      g.traverse(o => { if (o.isMesh) o.castShadow = true; });
-      // Sway flag for plant-ish things
-      const SWAY = { wheat: 0.05, corn: 0.04, flower: 0.06, sunflower: 0.05, tree: 0.03, apple: 0.03 };
-      if (SWAY[toolId]) {
-        g.userData.sway = true;
-        g.userData.swayAmount = SWAY[toolId];
-        g.userData.swayPhase = Math.random() * Math.PI * 2;
-      }
-      return g;
-    }
-
-    // Centerpiece: a larger, decorative cottage on the homestead tile
-    function makeHomestead() {
-      const g = new THREE.Group();
-      const s = 1.45;
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.62 * s, 0.5 * s, 0.5 * s), M.houseWall);
-      wall.position.y = 0.25 * s;
-      g.add(wall);
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(0.55 * s, 0.4 * s, 4), M.houseRoof);
-      roof.rotation.y = Math.PI / 4;
-      roof.position.y = 0.5 * s + 0.2 * s;
-      g.add(roof);
-      // door
-      const door = new THREE.Mesh(new THREE.BoxGeometry(0.14 * s, 0.24 * s, 0.04 * s), M.door);
-      door.position.set(0, 0.12 * s, 0.26 * s);
-      g.add(door);
-      // door arch
-      const arch = new THREE.Mesh(new THREE.BoxGeometry(0.18 * s, 0.03 * s, 0.05 * s), M.houseRoof);
-      arch.position.set(0, 0.245 * s, 0.27 * s);
-      g.add(arch);
-      // two windows
-      const winGeom = new THREE.BoxGeometry(0.14 * s, 0.14 * s, 0.04 * s);
-      const winL = new THREE.Mesh(winGeom, M.window); winL.position.set(-0.2 * s, 0.32 * s, 0.26 * s); g.add(winL);
-      const winR = new THREE.Mesh(winGeom, M.window); winR.position.set(0.2 * s, 0.32 * s, 0.26 * s); g.add(winR);
-      // window crosses
-      const crossH = new THREE.MeshLambertMaterial({ color: 0xf2e1bf });
-      [-0.2, 0.2].forEach(xx => {
-        const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.012 * s, 0.14 * s, 0.05 * s), crossH);
-        vbar.position.set(xx * s, 0.32 * s, 0.265 * s);
+      // windows
+      const winY = wallH * 0.6;
+      const winGeo = new THREE.BoxGeometry(0.18, 0.16, 0.04);
+      const winL = new THREE.Mesh(winGeo, M.windowB);
+      winL.position.set(-(wallW / 2 - 0.16), winY, wallD / 2 + 0.025);
+      g.add(winL);
+      const winR = new THREE.Mesh(winGeo, M.windowB);
+      winR.position.set(wallW / 2 - 0.16, winY, wallD / 2 + 0.025);
+      g.add(winR);
+      // window crosses (cream stripes)
+      [-1, 1].forEach(sgn => {
+        const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.16, 0.05), M.wallCream);
+        vbar.position.set(sgn * (wallW / 2 - 0.16), winY, wallD / 2 + 0.035);
         g.add(vbar);
-        const hbar = new THREE.Mesh(new THREE.BoxGeometry(0.14 * s, 0.012 * s, 0.05 * s), crossH);
-        hbar.position.set(xx * s, 0.32 * s, 0.265 * s);
+        const hbar = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.022, 0.05), M.wallCream);
+        hbar.position.set(sgn * (wallW / 2 - 0.16), winY, wallD / 2 + 0.035);
         g.add(hbar);
       });
+
       // chimney
-      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.1 * s, 0.26 * s, 0.1 * s), M.houseRoof);
-      chim.position.set(-0.18 * s, 0.7 * s, -0.05 * s);
+      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.1), M.chimney);
+      const chimX = -wallW * 0.28;
+      const chimZ = -wallD * 0.2;
+      chim.position.set(chimX, wallH + 0.22, chimZ);
       g.add(chim);
-      // smoke puffs (bounded loop in RAF)
-      const smokeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+
+      // smoke puffs (bounded loop, only on homestead + level 2+ houses)
       const smokes = [];
-      for (let i = 0; i < 3; i++) {
-        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.07 + i * 0.015, 8, 6), smokeMat.clone());
-        puff.userData.t0 = i / 3;
-        g.add(puff);
-        smokes.push(puff);
+      const wantsSmoke = (level >= 1);
+      if (wantsSmoke) {
+        for (let i = 0; i < 3; i++) {
+          const puff = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.10, 0.12), M.smoke.clone());
+          puff.userData.t0 = i / 3;
+          puff.position.set(chimX, wallH + 0.33, chimZ);
+          g.add(puff);
+          smokes.push(puff);
+        }
       }
-      g.userData.smokes = smokes;
-      g.userData.chimneyX = -0.18 * s;
-      g.userData.chimneyY = 0.83 * s;
-      g.userData.chimneyZ = -0.05 * s;
-      // shadows
-      g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+
+      g.userData = {
+        kind: 'house',
+        palette: pal,
+        smokes,
+        chimney: { x: chimX, y: wallH + 0.33, z: chimZ },
+      };
+      castReceive(g);
       return g;
     }
 
-    // Place the homestead
+    function makeWaterCap() {
+      // Replaces the grass top of a tile with water; we put a low slab on top
+      const g = new THREE.Group();
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.96, 0.06, TILE * 0.96), M.water);
+      slab.position.y = 0.04;
+      slab.receiveShadow = true;
+      g.add(slab);
+      const inset = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.78, 0.04, TILE * 0.78), M.waterDk);
+      inset.position.y = 0.06;
+      g.add(inset);
+      // a couple of foam ripples
+      for (let i = 0; i < 2; i++) {
+        const rip = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.015, 0.025), M.waterFoam);
+        rip.position.set((Math.random() - 0.5) * 0.4, 0.085, (Math.random() - 0.5) * 0.4);
+        rip.rotation.y = Math.random() * Math.PI;
+        g.add(rip);
+      }
+      g.userData = { kind: 'water' };
+      return g;
+    }
+
+    function makeSprite(kind, level, seed) {
+      if (kind === 'tree')   return makeTree(level);
+      if (kind === 'flower') return makeFlowerPatch(seed);
+      if (kind === 'house')  return makeHouse(level);
+      if (kind === 'water')  return makeWaterCap();
+      return new THREE.Group();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // HOMESTEAD (permanent center cottage)
+    // ─────────────────────────────────────────────────────────────
     {
-      const homestead = makeHomestead();
-      const homeCell = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
+      const homestead = makeHouse(3, 'red');
       homestead.position.y = 0.36;
-      homeCell.group.add(homestead);
-      homeCell.homestead = homestead;
+      const hc = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
+      hc.group.add(homestead);
+      hc.homestead = homestead;
     }
 
     // ─────────────────────────────────────────────────────────────
     // CELL OPERATIONS
     // ─────────────────────────────────────────────────────────────
-    function getCell(x, z) {
-      return gs.cells[cellKey(x, z)];
-    }
+    function getCell(x, z) { return gs.cells[cellKey(x, z)]; }
 
     function setSprite(x, z, group) {
       const cm = cellMeshes[cellKey(x, z)];
@@ -1002,8 +686,7 @@
       if (group) {
         group.position.y = 0.36;
         cm.group.add(group);
-        // Drop-in animation
-        group.userData.dropFrom = 1.4;
+        group.userData.dropFrom = 1.2;
         group.userData.dropAt = performance.now();
         if (cm.decoration) cm.decoration.visible = false;
       } else {
@@ -1011,64 +694,29 @@
       }
     }
 
-    function disposeGroup(g) {
-      g.traverse(o => {
-        if (o.geometry) o.geometry.dispose();
-      });
-    }
-
-    function placeAt(x, z, toolId) {
-      const tool = TOOLS.find(t => t.id === toolId);
-      if (!tool || tool.type === 'erase') return false;
+    function placeAt(x, z, kind) {
       if (x === HOMESTEAD.x && z === HOMESTEAD.z) {
         showToast('Home base — build around it');
         playSfx('bonk');
         return false;
       }
-      if (gs.coins < tool.cost) {
-        flashCantAfford();
-        return false;
-      }
-
       const existing = getCell(x, z);
-
-      // Upgrade path: same tool, same cell, level < maxLevel
-      if (existing && existing.tool === toolId && tool.type === 'object' && existing.level < tool.maxLevel) {
-        const upgradeCost = tool.cost * (existing.level + 1);
-        if (gs.coins < upgradeCost) {
-          flashCantAfford(upgradeCost);
-          return false;
-        }
-        gs.coins -= upgradeCost;
+      // Stack/upgrade for tree and house if same kind
+      if (existing && existing.kind === kind && (kind === 'tree' || kind === 'house')) {
+        if (existing.level >= MAX_LEVEL) { playSfx('bonk'); return false; }
         existing.level += 1;
-        setSprite(x, z, makeSprite(toolId, existing.level, 2));
-        pulseCoins();
-        floatNumber(`-${upgradeCost}`, x, z, '#b34a3b');
-        playSfx('upgrade');
+        setSprite(x, z, makeSprite(kind, existing.level, existing.seed));
+        playSfx('place');
         saveSoon();
         return true;
       }
-
-      // Otherwise, can only place on empty cell
       if (existing) {
         playSfx('bonk');
         return false;
       }
-
-      gs.coins -= tool.cost;
-      const now = performance.now();
-      const cell = {
-        tool: toolId,
-        level: 1,
-        plantedAt: now,
-        lastSpawn: now,   // start passive timer from plant
-        ripe: tool.type !== 'crop',  // objects start "active", crops grow
-        stage: tool.type === 'crop' ? 0 : 2,
-      };
-      gs.cells[cellKey(x, z)] = cell;
-      setSprite(x, z, makeSprite(toolId, cell.level, cell.stage));
-      pulseCoins();
-      floatNumber(`-${tool.cost}`, x, z, '#b34a3b');
+      const seed = Math.floor(Math.random() * 1e6);
+      gs.cells[cellKey(x, z)] = { kind, level: 1, seed };
+      setSprite(x, z, makeSprite(kind, 1, seed));
       playSfx('place');
       saveSoon();
       return true;
@@ -1080,141 +728,16 @@
         return false;
       }
       const c = getCell(x, z);
-      if (!c) {
-        playSfx('bonk');
-        return false;
-      }
+      if (!c) { playSfx('bonk'); return false; }
       delete gs.cells[cellKey(x, z)];
       setSprite(x, z, null);
-      // Remove any unclaimed coins on this cell
-      gs.pickups = gs.pickups.filter(p => {
-        if (p.x === x && p.z === z) {
-          scene.remove(p.mesh);
-          disposeGroup(p.mesh);
-          return false;
-        }
-        return true;
-      });
       playSfx('place');
       saveSoon();
       return true;
     }
 
-    function harvestAt(x, z) {
-      const c = getCell(x, z);
-      if (!c) return false;
-      const tool = TOOLS.find(t => t.id === c.tool);
-      if (!tool || tool.type !== 'crop') return false;
-      if (c.stage < 2) return false;
-      // Pay out
-      gs.coins += tool.yield;
-      delete gs.cells[cellKey(x, z)];
-      setSprite(x, z, null);
-      pulseCoins();
-      floatNumber(`+${tool.yield}`, x, z, '#b88416');
-      playSfx('harvest');
-      checkUnlocks();
-      saveSoon();
-      return true;
-    }
-
     // ─────────────────────────────────────────────────────────────
-    // PICKUPS (floating coins from passive objects)
-    // ─────────────────────────────────────────────────────────────
-    function makeCoinMesh() {
-      const g = new THREE.Group();
-      const disc = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.16, 0.16, 0.05, 18),
-        M.coin
-      );
-      disc.rotation.x = Math.PI / 2;
-      g.add(disc);
-      const rim = new THREE.Mesh(
-        new THREE.TorusGeometry(0.16, 0.025, 6, 18),
-        M.coinSide
-      );
-      rim.rotation.x = Math.PI / 2;
-      g.add(rim);
-      g.userData.isPickup = true;
-      return g;
-    }
-
-    function spawnPickup(x, z, yieldAmt) {
-      // Count existing pickups on this cell
-      const existing = gs.pickups.filter(p => p.x === x && p.z === z);
-      if (existing.length >= MAX_COINS_PER_CELL) return;
-      const slot = existing.length;
-      const mesh = makeCoinMesh();
-      mesh.userData.x = x;
-      mesh.userData.z = z;
-      mesh.userData.yieldAmt = yieldAmt;
-      mesh.position.set(worldX(x), 1.0 + slot * 0.18, worldZ(z));
-      scene.add(mesh);
-      gs.pickups.push({ x, z, mesh, born: performance.now(), slot, yieldAmt });
-    }
-
-    function collectPickup(p) {
-      gs.coins += p.yieldAmt;
-      pulseCoins();
-      floatNumber(`+${p.yieldAmt}`, p.x, p.z, '#b88416');
-      scene.remove(p.mesh);
-      disposeGroup(p.mesh);
-      gs.pickups = gs.pickups.filter(q => q !== p);
-      playSfx('coin');
-      checkUnlocks();
-      saveSoon();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // TICK (growth + spawning) — only after first interaction
-    // ─────────────────────────────────────────────────────────────
-    function tick(now) {
-      if (!pickupGrowthStarted) return;
-
-      // Crops grow
-      for (const k in gs.cells) {
-        const c = gs.cells[k];
-        const tool = TOOLS.find(t => t.id === c.tool);
-        if (!tool) continue;
-
-        if (tool.type === 'crop' && c.stage < 2) {
-          const elapsed = now - c.plantedAt;
-          const newStage = elapsed >= tool.growMs ? 2 :
-                           elapsed >= tool.growMs * 0.5 ? 1 : 0;
-          if (newStage !== c.stage) {
-            c.stage = newStage;
-            const [x, z] = k.split(',').map(Number);
-            setSprite(x, z, makeSprite(c.tool, c.level, c.stage));
-            if (newStage === 2) {
-              // soft sparkle pulse on ripen
-              const cm = cellMeshes[k];
-              if (cm.sprite) {
-                cm.sprite.userData.glowAt = now;
-              }
-            }
-          }
-        }
-
-        if (tool.type === 'object' && tool.spawnMs) {
-          const interval = tool.spawnMs / c.level; // higher level = faster
-          if (now - c.lastSpawn >= interval) {
-            const [x, z] = k.split(',').map(Number);
-            spawnPickup(x, z, tool.yield * c.level);
-            c.lastSpawn = now;
-          }
-        }
-      }
-
-      // Auto-pickup very old coins
-      for (let i = gs.pickups.length - 1; i >= 0; i--) {
-        if (now - gs.pickups[i].born > COIN_AUTO_PICKUP_MS) {
-          collectPickup(gs.pickups[i]);
-        }
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // RAYCAST / INPUT
+    // INPUT (tap only — no rotation, no drag)
     // ─────────────────────────────────────────────────────────────
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
@@ -1224,114 +747,52 @@
       ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
       ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(ndc, cam);
-
-      // Try pickups first (above tiles)
-      const pickupMeshes = gs.pickups.map(p => p.mesh);
-      if (pickupMeshes.length) {
-        const hits = raycaster.intersectObjects(pickupMeshes, true);
-        if (hits.length) {
-          let g = hits[0].object;
-          while (g && !g.userData.isPickup) g = g.parent;
-          if (g) {
-            const p = gs.pickups.find(q => q.mesh === g);
-            if (p) return { type: 'pickup', pickup: p };
-          }
-        }
-      }
-
-      // Then sprites (so a ripe crop is tappable even when tool selected)
-      const spriteMeshes = [];
+      // Walk sprites + homestead first (they sit above tiles)
+      const objs = [];
       for (const k in cellMeshes) {
         const cm = cellMeshes[k];
-        if (cm.sprite) spriteMeshes.push(cm.sprite);
+        if (cm.sprite) objs.push(cm.sprite);
+        if (cm.homestead) objs.push(cm.homestead);
       }
-      if (spriteMeshes.length) {
-        const sHits = raycaster.intersectObjects(spriteMeshes, true);
+      if (objs.length) {
+        const sHits = raycaster.intersectObjects(objs, true);
         if (sHits.length) {
           let g = sHits[0].object;
-          while (g && !g.parent?.isScene && g.parent) {
-            if (g.parent === scene) break;
-            // walk up to cell group
+          while (g && g !== scene) {
             for (const k in cellMeshes) {
-              if (cellMeshes[k].sprite === g) {
+              const cm = cellMeshes[k];
+              if (cm.sprite === g || cm.homestead === g) {
                 const [x, z] = k.split(',').map(Number);
-                return { type: 'cell', x, z, hasSprite: true };
+                return { x, z };
               }
             }
             g = g.parent;
           }
         }
       }
-
-      // Then tiles
       const hits = raycaster.intersectObjects(tileMeshes);
       if (hits.length) {
         const t = hits[0].object;
-        return { type: 'cell', x: t.userData.x, z: t.userData.z, hasSprite: !!cellMeshes[cellKey(t.userData.x, t.userData.z)].sprite };
+        return { x: t.userData.x, z: t.userData.z };
       }
       return null;
     }
 
-    // Drag-to-rotate state + tap disambiguation
-    const DRAG_THRESHOLD = 8;
-    let pointerStart = null;
-    let isDragging = false;
-
-    function performTap(clientX, clientY) {
-      cam.updateMatrixWorld(true);
-      const hit = pickAt(clientX, clientY);
-      if (!hit) return;
-      hideHint();
-      if (hit.type === 'pickup') { collectPickup(hit.pickup); return; }
-      const c = getCell(hit.x, hit.z);
-      if (c) {
-        const tool = TOOLS.find(t => t.id === c.tool);
-        if (tool && tool.type === 'crop' && c.stage === 2) {
-          harvestAt(hit.x, hit.z);
-          return;
-        }
-      }
-      if (selectedTool === 'erase') { eraseAt(hit.x, hit.z); return; }
-      if (selectedTool) placeAt(hit.x, hit.z, selectedTool);
-    }
-
-    function onPointerDown(e) {
+    function onTap(e) {
       if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
       if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
       kickStart();
-      pointerStart = { x: e.clientX, y: e.clientY, yaw0: camYaw, t: performance.now() };
-      isDragging = false;
-      try { canvas.setPointerCapture(e.pointerId); } catch {}
+      cam.updateMatrixWorld(true);
+      const hit = pickAt(e.clientX, e.clientY);
+      if (!hit) return;
+      hideHint();
+      if (selectedTool === 'erase') { eraseAt(hit.x, hit.z); return; }
+      if (selectedTool) placeAt(hit.x, hit.z, selectedTool);
     }
-    function onPointerMove(e) {
-      if (!pointerStart) return;
-      const dx = e.clientX - pointerStart.x;
-      const dy = e.clientY - pointerStart.y;
-      if (!isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-        isDragging = true;
-        hideHint();
-      }
-      if (isDragging) {
-        camYaw = pointerStart.yaw0 + dx * 0.006;
-      }
-    }
-    function onPointerUp(e) {
-      if (!pointerStart) return;
-      const wasDragging = isDragging;
-      const sx = pointerStart.x, sy = pointerStart.y;
-      pointerStart = null;
-      isDragging = false;
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
-      if (wasDragging) return;
-      performTap(e.clientX || sx, e.clientY || sy);
-    }
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('pointerdown', onTap);
 
     // ─────────────────────────────────────────────────────────────
-    // DOCK UI
+    // DOCK
     // ─────────────────────────────────────────────────────────────
     const dockEl = document.getElementById('dock');
 
@@ -1340,32 +801,18 @@
       for (const tool of TOOLS) {
         const div = document.createElement('div');
         div.className = 'tool';
-        div.dataset.tool = tool.id;
-        const unlocked = gs.coins >= tool.unlock || hasEverHadEnough(tool.id);
-        if (!unlocked) div.classList.add('locked');
-        if (tool.type !== 'erase' && unlocked && gs.coins < tool.cost) div.classList.add('cant-afford');
         if (selectedTool === tool.id) div.classList.add('selected');
         const glyph = document.createElement('div');
         glyph.className = 'glyph';
         glyph.innerHTML = ICONS[tool.id] || '';
         div.appendChild(glyph);
-        const cost = document.createElement('div');
-        cost.className = 'cost';
-        if (tool.type === 'erase') {
-          cost.textContent = 'remove';
-        } else if (!unlocked) {
-          cost.innerHTML = `<span class="lock-mini">${ICONS.lock}</span>${tool.unlock}`;
-        } else {
-          cost.innerHTML = `<span class="dot"></span>${tool.cost}`;
-        }
-        div.appendChild(cost);
+        const lbl = document.createElement('div');
+        lbl.className = 'lbl';
+        lbl.textContent = tool.name;
+        div.appendChild(lbl);
         div.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           kickStart();
-          if (!unlocked) {
-            showToast(`Unlock at ${tool.unlock} coins`);
-            return;
-          }
           selectedTool = (selectedTool === tool.id) ? null : tool.id;
           renderDock();
           hideHint();
@@ -1374,73 +821,123 @@
       }
     }
 
-    function hasEverHadEnough(toolId) {
-      // Once unlocked, stays unlocked even if coins drop
-      return !!gs.seenUnlocks[toolId];
-    }
-
-    function checkUnlocks() {
-      for (const tool of TOOLS) {
-        if (tool.unlock > 0 && !gs.seenUnlocks[tool.id] && gs.coins >= tool.unlock) {
-          gs.seenUnlocks[tool.id] = true;
-          showToast(`<span class="toast-ico">${ICONS[tool.id] || ICONS.sparkle}</span>${tool.name} unlocked`, true);
-          playSfx('unlock');
-        }
-      }
-      renderDock();
-    }
-
-    function updateCoinUI() {
-      document.getElementById('coin-count').textContent = gs.coins;
-      // Re-render dock so "cant-afford" updates
-      renderDock();
-    }
-
-    function pulseCoins() {
-      updateCoinUI();
-      const pill = document.getElementById('coin-pill');
-      pill.classList.remove('pulse');
-      void pill.offsetWidth;
-      pill.classList.add('pulse');
-    }
-
-    function flashCantAfford(cost) {
-      showToast('Need more coins');
-      playSfx('bonk');
-    }
-
     // ─────────────────────────────────────────────────────────────
-    // TOAST + FLOAT NUMBER
+    // TOAST + HINT
     // ─────────────────────────────────────────────────────────────
-    function showToast(html, unlock) {
+    function showToast(html) {
       const t = document.createElement('div');
-      t.className = 'toast-bubble' + (unlock ? ' unlock' : '');
+      t.className = 'toast-bubble';
       t.innerHTML = html;
       document.getElementById('toast').appendChild(t);
-      setTimeout(() => t.remove(), 2400);
+      setTimeout(() => t.remove(), 1900);
     }
-
-    const _floatV3 = new THREE.Vector3();
-    function floatNumber(text, x, z, color) {
-      _floatV3.set(worldX(x), 0.8, worldZ(z));
-      _floatV3.project(cam);
-      const rect = canvas.getBoundingClientRect();
-      const sx = ( _floatV3.x + 1) / 2 * rect.width + rect.left;
-      const sy = (-_floatV3.y + 1) / 2 * rect.height + rect.top;
-      const el = document.createElement('div');
-      el.className = 'float-num';
-      el.textContent = text;
-      el.style.left = sx + 'px';
-      el.style.top = sy + 'px';
-      if (color) el.style.color = color;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 900);
-    }
-
     function hideHint() {
-      if (gs.hintShown) {
-        document.getElementById('hint').classList.add('hide');
-        gs.hintShown = false;
+      const h = document.getElementById('hint');
+      if (h) h.classList.add('hide');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // WANDERING COW
+    // ─────────────────────────────────────────────────────────────
+    function makeCow() {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.24), M.cowWhite);
+      body.position.set(0, 0.22, 0);
+      g.add(body);
+      const spot1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.12), M.cowSpot);
+      spot1.position.set(0.06, 0.36, 0.06); g.add(spot1);
+      const spot2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.10), M.cowSpot);
+      spot2.position.set(-0.08, 0.36, -0.08); g.add(spot2);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.16, 0.16), M.cowWhite);
+      head.position.set(0.27, 0.30, 0); g.add(head);
+      const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.10), M.cowMuzzle);
+      muzzle.position.set(0.36, 0.26, 0); g.add(muzzle);
+      // eyes
+      [-0.06, 0.06].forEach(dz => {
+        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.025), M.cowSpot);
+        eye.position.set(0.34, 0.35, dz);
+        g.add(eye);
+      });
+      // ears
+      [-0.09, 0.09].forEach(dz => {
+        const ear = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), M.cowSpot);
+        ear.position.set(0.22, 0.42, dz);
+        g.add(ear);
+      });
+      const legs = [];
+      [[0.13, -0.08], [0.13, 0.08], [-0.13, -0.08], [-0.13, 0.08]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.07), M.hoof);
+        leg.position.set(x, 0.08, z);
+        g.add(leg);
+        legs.push(leg);
+      });
+      g.userData.legs = legs;
+      castReceive(g);
+      return g;
+    }
+
+    const cow = makeCow();
+    cow.position.set(worldX(2), 0.36, worldZ(5));
+    scene.add(cow);
+    let cowSrc = { x: cow.position.x, z: cow.position.z };
+    let cowDst = null;
+    let cowProgress = 1;
+    let cowPauseUntil = 0;
+    let cowFacing = 0;
+
+    function pickCowTarget() {
+      const candidates = [];
+      for (let x = 0; x < GRID; x++) {
+        for (let z = 0; z < GRID; z++) {
+          if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue;
+          const c = gs.cells[cellKey(x, z)];
+          if (c && (c.kind === 'water' || c.kind === 'house' || c.kind === 'tree')) continue;
+          candidates.push({ x, z });
+        }
+      }
+      if (!candidates.length) return null;
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
+    function updateCow(now, dt) {
+      // While idle: bob slightly
+      if (cowProgress >= 1) {
+        if (now < cowPauseUntil) {
+          cow.position.y = 0.36 + Math.sin(now / 800) * 0.01;
+          return;
+        }
+        const t = pickCowTarget();
+        if (!t) { cowPauseUntil = now + 2000; return; }
+        cowSrc = { x: cow.position.x, z: cow.position.z };
+        cowDst = { x: worldX(t.x), z: worldZ(t.z) };
+        cowProgress = 0;
+        cowPauseUntil = 0;
+      }
+      const speed = dt / 2800;
+      cowProgress = Math.min(1, cowProgress + speed);
+      const e = cowProgress;
+      cow.position.x = cowSrc.x + (cowDst.x - cowSrc.x) * e;
+      cow.position.z = cowSrc.z + (cowDst.z - cowSrc.z) * e;
+      const dx = cowDst.x - cowSrc.x;
+      const dz = cowDst.z - cowSrc.z;
+      if (Math.hypot(dx, dz) > 0.001) {
+        const want = Math.atan2(dx, dz) - Math.PI / 2;
+        // smooth rotate
+        let diff = want - cowFacing;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        cowFacing += diff * Math.min(1, dt / 200);
+        cow.rotation.y = cowFacing;
+      }
+      // Walk animation
+      const stepT = now / 130;
+      cow.userData.legs.forEach((leg, i) => {
+        const phase = (i === 0 || i === 3) ? 0 : Math.PI;
+        leg.position.y = 0.08 + Math.max(0, Math.sin(stepT + phase)) * 0.05;
+      });
+      cow.position.y = 0.36 + Math.abs(Math.sin(stepT * 2)) * 0.02;
+      if (cowProgress >= 1) {
+        cowPauseUntil = now + 800 + Math.random() * 1800;
       }
     }
 
@@ -1451,8 +948,7 @@
       const W = window.innerWidth, H = window.innerHeight;
       renderer.setSize(W, H, false);
       const aspect = W / H;
-      // Aim: island roughly fills middle, dock has room
-      const viewH = 5.6 / camZoom;
+      const viewH = 5.6;
       const viewW = viewH * aspect;
       cam.left = -viewW;
       cam.right = viewW;
@@ -1467,13 +963,15 @@
     // RENDER LOOP
     // ─────────────────────────────────────────────────────────────
     let lastDraw = 0;
+    let lastTime = performance.now();
     const FRAME_MS = 1000 / 60;
     function frame(now) {
       requestAnimationFrame(frame);
       if (now - lastDraw < FRAME_MS - 1) return;
+      const dt = now - lastTime;
+      lastTime = now;
       lastDraw = now;
 
-      // Drop-in animation + sway on sprites; decoration sway
       const swayT = now / 1500;
       for (const k in cellMeshes) {
         const cm = cellMeshes[k];
@@ -1483,159 +981,98 @@
           if (t >= 1) {
             sp.position.y = 0.36;
             sp.userData.dropAt = 0;
+            sp.scale.setScalar(1);
           } else {
             const e = 1 - Math.pow(1 - t, 3);
             sp.position.y = 0.36 + (1 - e) * sp.userData.dropFrom;
             sp.scale.setScalar(0.7 + 0.3 * e);
           }
         }
-        if (sp && sp.userData.glowAt) {
-          const t = (now - sp.userData.glowAt) / 500;
-          if (t >= 1) sp.userData.glowAt = 0;
-          else {
-            const e = Math.sin(t * Math.PI);
-            sp.scale.setScalar(1 + 0.08 * e);
+        if (sp && sp.userData.swayAmount && !sp.userData.dropAt) {
+          sp.rotation.z = Math.sin(swayT + (sp.userData.swayPhase || 0)) * sp.userData.swayAmount;
+        }
+        if (cm.decoration && cm.decoration.visible) {
+          cm.decoration.rotation.z =
+            Math.sin(swayT + cm.decoration.userData.swayPhase) * cm.decoration.userData.swayAmount;
+        }
+        // smoke (per house sprite or homestead)
+        const smokeHost = (sp && sp.userData.smokes) ? sp
+          : (cm.homestead && cm.homestead.userData.smokes ? cm.homestead : null);
+        if (smokeHost && tickStarted) {
+          const ch = smokeHost.userData.chimney;
+          const sm = smokeHost.userData.smokes;
+          for (const puff of sm) {
+            const tt = ((now / 2400) + puff.userData.t0) % 1;
+            puff.position.x = ch.x + Math.sin(tt * 6 + (puff.userData.t0 * 6)) * 0.08;
+            puff.position.y = ch.y + tt * 0.7;
+            puff.position.z = ch.z - tt * 0.04;
+            puff.material.opacity = (1 - tt) * 0.7;
+            puff.scale.setScalar(0.5 + tt * 0.9);
           }
         }
-        // wind sway on plants
-        if (sp && sp.userData.sway && !sp.userData.dropAt) {
-          sp.rotation.z = Math.sin(swayT + sp.userData.swayPhase) * sp.userData.swayAmount;
-        }
-        // tuft sway
-        if (cm.decoration && cm.decoration.visible) {
-          cm.decoration.rotation.z = Math.sin(swayT + cm.decoration.userData.swayPhase) * cm.decoration.userData.swayAmount;
-        }
       }
 
-      // Homestead smoke puffs
-      const homeCell = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
-      if (homeCell && homeCell.homestead) {
-        const hs = homeCell.homestead;
-        const sm = hs.userData.smokes;
-        const cx = hs.userData.chimneyX, cy = hs.userData.chimneyY, cz = hs.userData.chimneyZ;
-        for (let i = 0; i < sm.length; i++) {
-          const puff = sm[i];
-          const tt = ((now / 2600) + puff.userData.t0) % 1;
-          puff.position.x = cx + Math.sin(tt * 6) * 0.07;
-          puff.position.y = cy + tt * 0.7;
-          puff.position.z = cz - tt * 0.05;
-          const opacity = (1 - tt) * 0.7 + 0.05;
-          puff.material.opacity = opacity;
-          puff.scale.setScalar(0.6 + tt * 0.8);
-        }
-      }
-
-      // Pickup bob + spin
-      for (const p of gs.pickups) {
-        const t = (now - p.born) / 1000;
-        p.mesh.position.y = 1.0 + p.slot * 0.18 + Math.sin(t * 2.4) * 0.08;
-        p.mesh.rotation.y = t * 1.6;
-      }
-
-      // Water ripple (gentle vertex displacement)
-      {
-        const pos = waterGeom.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-          const wx = pos.getX(i);
-          const wy = pos.getY(i);
-          const dz = Math.sin((wx + now / 700) * 0.85) * 0.06
-                   + Math.cos((wy + now / 620) * 0.7)  * 0.05;
-          pos.setZ(i, dz);
-        }
-        pos.needsUpdate = true;
-      }
-
-      // Tick growth/spawning
-      tick(now);
-
-      // Camera orbit (drag-driven) + tiny ambient bob
-      const yaw = camYaw + Math.sin(now / 6000) * 0.003;
-      cam.position.x = Math.sin(yaw) * CAM_DIST;
-      cam.position.z = Math.cos(yaw) * CAM_DIST;
-      cam.position.y = CAM_HEIGHT + Math.sin(now / 4500) * 0.08;
-      cam.lookAt(0, 0, 0);
+      if (tickStarted) updateCow(now, dt);
 
       renderer.render(scene, cam);
     }
     requestAnimationFrame(frame);
 
     // ─────────────────────────────────────────────────────────────
-    // AUDIO (lazy, preload-safe, swell ambient)
+    // AUDIO (lazy, swell ambient)
     // ─────────────────────────────────────────────────────────────
     let actx = null;
     let masterGain = null;
     let ambientStarted = false;
-    let noiseBuffer = null;
 
     function ensureAudio() {
       if (actx) return;
       try {
         actx = new (window.AudioContext || window.webkitAudioContext)();
         masterGain = actx.createGain();
-        masterGain.gain.value = 0.6;
+        masterGain.gain.value = 0.55;
         masterGain.connect(actx.destination);
-        // Pre-allocate noise buffer once
-        const len = actx.sampleRate * 1.5;
-        noiseBuffer = actx.createBuffer(1, len, actx.sampleRate);
-        const data = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
-      } catch (e) { actx = null; }
+      } catch { actx = null; }
     }
-
     function startAmbient() {
       if (ambientStarted || !actx) return;
       ambientStarted = true;
       scheduleSwell();
     }
-
     function scheduleSwell() {
       if (!actx) return;
       const ctx = actx;
-      const rise = 5 + Math.random() * 3;   // 5-8s
-      const hold = 8 + Math.random() * 8;   // 8-16s
-      const fall = 6 + Math.random() * 4;   // 6-10s
-      const silence = 7 + Math.random() * 9;// 7-16s
+      const rise = 5 + Math.random() * 3;
+      const hold = 8 + Math.random() * 8;
+      const fall = 6 + Math.random() * 4;
+      const silence = 7 + Math.random() * 9;
       const total = rise + hold + fall;
-
       const gain = ctx.createGain();
       gain.gain.value = 0;
       gain.connect(masterGain);
-
-      // Two slow oscillators a fifth apart, slightly detuned, low-pass
       const o1 = ctx.createOscillator();
       const o2 = ctx.createOscillator();
       o1.type = 'sine'; o2.type = 'sine';
-      // pick a root C3 / G3
-      const roots = [130.81, 146.83, 164.81, 174.61, 196.00];
+      const roots = [130.81, 146.83, 164.81, 174.61, 196.0];
       const base = roots[Math.floor(Math.random() * roots.length)];
       o1.frequency.value = base;
       o2.frequency.value = base * 1.5 * (1 + (Math.random() - 0.5) * 0.005);
-
       const lp = ctx.createBiquadFilter();
       lp.type = 'lowpass';
       lp.frequency.value = 800;
-
-      o1.connect(lp);
-      o2.connect(lp);
-      lp.connect(gain);
-
+      o1.connect(lp); o2.connect(lp); lp.connect(gain);
       const t0 = ctx.currentTime;
-      const peak = 0.18 + Math.random() * 0.06;
+      const peak = 0.16 + Math.random() * 0.05;
       gain.gain.setValueAtTime(0, t0);
       gain.gain.linearRampToValueAtTime(peak, t0 + rise);
       gain.gain.setValueAtTime(peak, t0 + rise + hold);
       gain.gain.linearRampToValueAtTime(0, t0 + total);
-
-      o1.start(t0);
-      o2.start(t0);
-      o1.stop(t0 + total + 0.05);
-      o2.stop(t0 + total + 0.05);
-
+      o1.start(t0); o2.start(t0);
+      o1.stop(t0 + total + 0.05); o2.stop(t0 + total + 0.05);
       setTimeout(scheduleSwell, (total + silence) * 1000);
     }
-
     function playSfx(kind) {
-      if (!actx) return;
+      if (!actx || actx.state !== 'running') return;
       const ctx = actx;
       const t = ctx.currentTime;
       if (kind === 'place') {
@@ -1644,159 +1081,87 @@
         o.type = 'triangle';
         o.frequency.setValueAtTime(420, t);
         o.frequency.exponentialRampToValueAtTime(220, t + 0.18);
-        g.gain.setValueAtTime(0.18, t);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        g.gain.setValueAtTime(0.16, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
         o.connect(g); g.connect(masterGain);
-        o.start(t); o.stop(t + 0.22);
-      } else if (kind === 'harvest') {
-        playChime([523.25, 659.25, 783.99], 0.06, 0.22);
-      } else if (kind === 'coin') {
-        playChime([880, 1108.73], 0.04, 0.15);
-      } else if (kind === 'upgrade') {
-        playChime([392, 587.33, 783.99, 1046.5], 0.07, 0.28);
-      } else if (kind === 'unlock') {
-        playChime([523.25, 659.25, 783.99, 1046.5], 0.1, 0.35);
+        o.start(t); o.stop(t + 0.24);
       } else if (kind === 'bonk') {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.type = 'square';
         o.frequency.value = 110;
-        g.gain.setValueAtTime(0.07, t);
+        g.gain.setValueAtTime(0.06, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
         o.connect(g); g.connect(masterGain);
         o.start(t); o.stop(t + 0.13);
       }
     }
 
-    function playChime(notes, stagger, fade) {
-      if (!actx) return;
-      const ctx = actx;
-      notes.forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.value = freq;
-        const t = ctx.currentTime + i * stagger;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, t + fade);
-        o.connect(g); g.connect(masterGain);
-        o.start(t); o.stop(t + fade + 0.05);
-      });
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // BOOT / FIRST INTERACTION GATE
-    // ─────────────────────────────────────────────────────────────
     function kickStart() {
       if (started) return;
       started = true;
       ensureAudio();
-      if (actx && actx.state !== 'running') {
-        actx.resume();
-      }
-      // Delay ambient start ≥500ms after first interaction (iOS audio thread safety)
-      setTimeout(() => {
-        if (actx && actx.state === 'running') startAmbient();
-      }, 700);
-      pickupGrowthStarted = true;
+      if (actx && actx.state !== 'running') actx.resume();
+      setTimeout(() => { if (actx && actx.state === 'running') startAmbient(); }, 700);
+      tickStarted = true;
     }
 
     // ─────────────────────────────────────────────────────────────
     // SAVE / LOAD
     // ─────────────────────────────────────────────────────────────
-    let saveTimer = null;
     function saveSoon() {
       if (saveTimer) return;
       saveTimer = setTimeout(() => { saveTimer = null; writeSave(); }, 400);
     }
-
     function writeSave() {
       try {
-        const data = {
-          coins: gs.coins,
-          cells: {},
-          seenUnlocks: gs.seenUnlocks,
-        };
+        const data = { cells: {} };
         for (const k in gs.cells) {
           const c = gs.cells[k];
-          data.cells[k] = {
-            tool: c.tool,
-            level: c.level,
-            plantedAt: c.plantedAt - performance.now(), // store relative
-            stage: c.stage,
-            // lastSpawn becomes "now" on resume — keeps preload safe (no instant flood)
-          };
+          data.cells[k] = { kind: c.kind, level: c.level, seed: c.seed };
         }
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       } catch {}
     }
-
     function eraseSave() {
       try { localStorage.removeItem(SAVE_KEY); } catch {}
     }
-
     function readSave() {
       try {
         const raw = localStorage.getItem(SAVE_KEY);
         if (!raw) return null;
         const data = JSON.parse(raw);
-        if (typeof data.coins !== 'number') return null;
         return data;
       } catch { return null; }
     }
-
     function applySave(data) {
-      gs.coins = data.coins || 0;
-      gs.seenUnlocks = data.seenUnlocks || {};
-      const now = performance.now();
       for (const k in (data.cells || {})) {
         const sc = data.cells[k];
         const [x, z] = k.split(',').map(Number);
-        if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue; // skip homestead tile (legacy saves)
-        const tool = TOOLS.find(t => t.id === sc.tool);
-        if (!tool) continue;
-        const cell = {
-          tool: sc.tool,
-          level: sc.level || 1,
-          plantedAt: now + (sc.plantedAt || 0),
-          lastSpawn: now,
-          stage: typeof sc.stage === 'number' ? sc.stage : (tool.type === 'crop' ? 0 : 2),
-          ripe: tool.type !== 'crop',
-        };
-        gs.cells[k] = cell;
-        // Recompute stage based on elapsed (for re-opens within session)
-        if (tool.type === 'crop' && cell.stage < 2) {
-          const elapsed = now - cell.plantedAt;
-          if (elapsed >= tool.growMs) cell.stage = 2;
-          else if (elapsed >= tool.growMs * 0.5) cell.stage = 1;
-        }
-        setSprite(x, z, makeSprite(cell.tool, cell.level, cell.stage));
+        if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue;
+        gs.cells[k] = { kind: sc.kind, level: sc.level || 1, seed: sc.seed || 0 };
+        setSprite(x, z, makeSprite(sc.kind, sc.level || 1, sc.seed || 0));
       }
-      updateCoinUI();
     }
 
-    // Save on page hide too
-    window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeSave(); });
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') writeSave();
+    });
     window.addEventListener('pagehide', writeSave);
 
     // ─────────────────────────────────────────────────────────────
-    // RESUME DIALOG / INIT (TDZ-safe: this runs after everything above)
+    // INIT
     // ─────────────────────────────────────────────────────────────
     (function init() {
-      // Inject SVG into the resume dialog icon
       const resumeIco = document.getElementById('resume-ico');
-      if (resumeIco) resumeIco.innerHTML = ICONS.wheat;
-
+      if (resumeIco) resumeIco.innerHTML = ICONS.house;
       const saved = readSave();
-      const hasMeaningful = saved && (saved.coins !== STARTING_COINS || Object.keys(saved.cells || {}).length > 0);
+      const hasMeaningful = saved && Object.keys(saved.cells || {}).length > 0;
       renderDock();
-      updateCoinUI();
       if (hasMeaningful) {
         const overlay = document.getElementById('resume-overlay');
         const total = Object.keys(saved.cells || {}).length;
-        document.getElementById('resume-sub').innerHTML =
-          `<span class="resume-coin">${ICONS.coin}</span> ${saved.coins} &middot; ${total} tiles planted`;
+        document.getElementById('resume-sub').textContent = `${total} tiles placed`;
         overlay.classList.add('show');
         document.getElementById('resume-yes').addEventListener('pointerdown', () => {
           applySave(saved);
