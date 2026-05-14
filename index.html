@@ -150,10 +150,11 @@
     position: relative;
   }
   .tool .glyph {
-    font-size: 26px;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.12));
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.14));
   }
+  .tool .glyph svg { width: 100%; height: 100%; display: block; }
   .tool .cost {
     font-size: 11px;
     font-weight: 700;
@@ -165,18 +166,16 @@
     width: 8px; height: 8px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #ffe79a, var(--coin) 60%, var(--coin-shadow));
   }
+  .tool .cost .lock-mini {
+    width: 11px; height: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .tool .cost .lock-mini svg { width: 100%; height: 100%; display: block; }
   .tool.locked {
-    opacity: 0.42;
-    filter: grayscale(0.9);
+    opacity: 0.5;
+    filter: saturate(0.55);
   }
   .tool.locked .glyph { filter: none; }
-  .tool.locked .cost .dot {
-    background: #b9b3a3;
-  }
-  .tool.locked .cost::before {
-    content: "🔒 ";
-    margin-right: 1px;
-  }
   .tool:not(.locked):active { transform: scale(0.94); }
   .tool.selected {
     background: rgba(255, 235, 170, 0.95);
@@ -275,7 +274,20 @@
     from { opacity: 0; transform: translateY(14px) scale(0.96); }
     to { opacity: 1; transform: none; }
   }
-  .resume-panel .ico { font-size: 38px; margin-bottom: 10px; }
+  .resume-panel .ico { width: 56px; height: 56px; margin: 0 auto 10px; }
+  .resume-panel .ico svg { width: 100%; height: 100%; display: block; }
+  .resume-panel .resume-coin {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; vertical-align: -2px;
+  }
+  .resume-panel .resume-coin svg { width: 100%; height: 100%; display: block; }
+  .toast-bubble .toast-ico {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .toast-bubble .toast-ico svg { width: 100%; height: 100%; display: block; }
   .resume-panel h2 { margin: 0 0 6px; font-size: 16px; }
   .resume-panel p  { margin: 0 0 18px; font-size: 12px; color: #8a7a55; }
   .resume-panel button {
@@ -317,7 +329,7 @@
 
   <div id="resume-overlay">
     <div class="resume-panel">
-      <div class="ico">🌾</div>
+      <div class="ico" id="resume-ico"></div>
       <h2>Welcome back to your farm</h2>
       <p id="resume-sub">Your progress is saved</p>
       <button class="yes" id="resume-yes">Continue</button>
@@ -340,20 +352,37 @@
     const COIN_AUTO_PICKUP_MS = 45000;
     const STARTING_COINS = 3;
 
+    // SVG icons (no emoji). 32x32 viewBox, filled shapes.
+    const ICONS = {
+      wheat:     '<svg viewBox="0 0 32 32"><rect x="14.5" y="13" width="3" height="16" rx="1" fill="#7a5a1f"/><ellipse cx="16" cy="6"  rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="10.5" cy="11" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="21.5" cy="11" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="10.5" cy="17" rx="3.2" ry="4" fill="#efc44d"/><ellipse cx="21.5" cy="17" rx="3.2" ry="4" fill="#efc44d"/></svg>',
+      tree:      '<svg viewBox="0 0 32 32"><rect x="14" y="20" width="4" height="10" rx="0.8" fill="#6b4322"/><circle cx="16" cy="13" r="9" fill="#4ea050"/><circle cx="11.5" cy="9.5" r="3.2" fill="#5fb35f"/></svg>',
+      corn:      '<svg viewBox="0 0 32 32"><path d="M16 7 L11 11 L13 18 L16 14 Z" fill="#5b8e2e"/><path d="M16 7 L21 11 L19 18 L16 14 Z" fill="#5b8e2e"/><ellipse cx="16" cy="21" rx="5" ry="9" fill="#f7d04a"/><circle cx="14" cy="18" r="1.1" fill="#d4a82a"/><circle cx="18" cy="18" r="1.1" fill="#d4a82a"/><circle cx="14" cy="22" r="1.1" fill="#d4a82a"/><circle cx="18" cy="22" r="1.1" fill="#d4a82a"/><circle cx="16" cy="26" r="1.1" fill="#d4a82a"/></svg>',
+      flower:    '<svg viewBox="0 0 32 32"><rect x="14.5" y="17" width="3" height="13" rx="0.5" fill="#4a7d2c"/><path d="M9 15 Q9 19 14 19 L14 22 L18 22 L18 19 Q23 19 23 15 Q23 7 16 7 Q9 7 9 15 Z" fill="#ff7c9e"/><circle cx="16" cy="13" r="2.4" fill="#ffd84a"/><path d="M11 25 Q7 22 9 19" stroke="#4a7d2c" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+      cow:       '<svg viewBox="0 0 32 32"><rect x="4" y="13" width="16" height="9" rx="2.2" fill="#fafafa"/><rect x="17" y="9" width="9" height="9" rx="2.2" fill="#fafafa"/><rect x="23" y="12" width="3" height="4" rx="0.6" fill="#f4c3c0"/><rect x="7" y="21" width="2.6" height="6" rx="0.5" fill="#2a2620"/><rect x="14.5" y="21" width="2.6" height="6" rx="0.5" fill="#2a2620"/><ellipse cx="9" cy="17" rx="2.2" ry="1.6" fill="#2a2620"/><ellipse cx="15" cy="18" rx="2.2" ry="1.6" fill="#2a2620"/><circle cx="20" cy="11.5" r="0.9" fill="#2a2620"/><path d="M17 7 L20 9 L17 11 Z" fill="#2a2620"/></svg>',
+      sunflower: '<svg viewBox="0 0 32 32"><rect x="14.5" y="16" width="3" height="14" rx="0.5" fill="#4a7d2c"/><path d="M16 2 L18 8 L16 11 L14 8 Z M30 16 L24 14 L21 16 L24 18 Z M16 30 Q14 26 16 23 L18 26 Z M2 16 L8 14 L11 16 L8 18 Z M26 6 L21 9 L20 13 L24 10 Z M6 6 L11 9 L12 13 L8 10 Z M26 26 L21 23 L20 19 L24 22 Z M6 26 L11 23 L12 19 L8 22 Z" fill="#f6c12c"/><circle cx="16" cy="14" r="4.8" fill="#6b3f10"/><circle cx="6" cy="22" r="2.4" fill="#5fb35f"/></svg>',
+      house:     '<svg viewBox="0 0 32 32"><path d="M4 15 L16 5 L28 15 L28 28 L4 28 Z" fill="#f2e1bf"/><path d="M2 16 L16 4 L30 16 L28 17 L16 7 L4 17 Z" fill="#c25b3a"/><rect x="14" y="20" width="4" height="8" rx="0.4" fill="#5a3a1f"/><rect x="19" y="18" width="5" height="5" fill="#8ed3ff"/><rect x="20.5" y="18" width="0.7" height="5" fill="#f2e1bf"/><rect x="19" y="20.3" width="5" height="0.7" fill="#f2e1bf"/></svg>',
+      pumpkin:   '<svg viewBox="0 0 32 32"><ellipse cx="7" cy="20" rx="4" ry="6" fill="#ea7d2b"/><ellipse cx="25" cy="20" rx="4" ry="6" fill="#ea7d2b"/><ellipse cx="16" cy="20" rx="9" ry="7" fill="#f29040"/><rect x="14.5" y="6" width="3" height="6" rx="0.6" fill="#4a7d2c"/><path d="M18 8 Q22 6 23 10" stroke="#4a7d2c" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+      apple:     '<svg viewBox="0 0 32 32"><rect x="14" y="21" width="4" height="9" rx="0.5" fill="#6b4322"/><circle cx="16" cy="13" r="9" fill="#4ea050"/><circle cx="11.5" cy="9.5" r="3" fill="#5fb35f"/><circle cx="20.5" cy="9.5" r="3" fill="#5fb35f"/><circle cx="11" cy="16" r="1.9" fill="#c63838"/><circle cx="20" cy="11" r="1.9" fill="#c63838"/><circle cx="18" cy="17" r="1.9" fill="#c63838"/></svg>',
+      erase:     '<svg viewBox="0 0 32 32"><path d="M20 5 L27 12 L13 26 L4 26 L4 17 Z" fill="#d4c4a8"/><path d="M16 9 L23 16" stroke="#a89880" stroke-width="2" stroke-linecap="round"/><path d="M4 26 L13 26 L4 17 Z" fill="#9a8868"/></svg>',
+      coin:      '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#f4c641"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#b88416" stroke-width="1.4"/><path d="M13 11 L13 21 M13 11 L18 11 Q21 11 21 13.5 Q21 16 18 16 L13 16 M18 16 L21 21" stroke="#b88416" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>',
+      lock:      '<svg viewBox="0 0 32 32"><rect x="6" y="14" width="20" height="14" rx="2" fill="#b9b3a3"/><path d="M10 14 L10 10 Q10 5 16 5 Q22 5 22 10 L22 14" stroke="#8a8475" stroke-width="2.8" fill="none"/><circle cx="16" cy="20" r="2.2" fill="#fffaee"/><rect x="14.8" y="20" width="2.4" height="4" fill="#fffaee"/></svg>',
+      sparkle:   '<svg viewBox="0 0 32 32"><path d="M16 3 L18 13 L28 16 L18 19 L16 29 L14 19 L4 16 L14 13 Z" fill="#f6c12c"/></svg>',
+    };
+
     // Tools (order = dock order)
     // type: 'crop' (grows, harvested once) | 'object' (passive, spawns coins) | 'erase'
     // level: stack upgrade max
     const TOOLS = [
-      { id: 'wheat',     name: 'Wheat',      glyph: '🌾', cost: 1,  unlock: 0,    type: 'crop',   growMs: 8000,  yield: 2,  maxLevel: 1 },
-      { id: 'tree',      name: 'Tree',       glyph: '🌳', cost: 4,  unlock: 0,    type: 'object', spawnMs: 14000, yield: 1, maxLevel: 3 },
-      { id: 'corn',      name: 'Corn',       glyph: '🌽', cost: 5,  unlock: 12,   type: 'crop',   growMs: 12000, yield: 6,  maxLevel: 1 },
-      { id: 'flower',    name: 'Flower',     glyph: '🌷', cost: 2,  unlock: 25,   type: 'crop',   growMs: 5000,  yield: 2,  maxLevel: 1 },
-      { id: 'cow',       name: 'Cow',        glyph: '🐄', cost: 18, unlock: 60,   type: 'object', spawnMs: 11000, yield: 4, maxLevel: 3 },
-      { id: 'sunflower', name: 'Sunflower',  glyph: '🌻', cost: 12, unlock: 120,  type: 'crop',   growMs: 18000, yield: 14, maxLevel: 1 },
-      { id: 'house',     name: 'House',      glyph: '🏠', cost: 35, unlock: 220,  type: 'object', spawnMs: 13000, yield: 7, maxLevel: 3 },
-      { id: 'pumpkin',   name: 'Pumpkin',    glyph: '🎃', cost: 25, unlock: 380,  type: 'crop',   growMs: 28000, yield: 32, maxLevel: 1 },
-      { id: 'apple',     name: 'Apple Tree', glyph: '🍎', cost: 70, unlock: 700,  type: 'object', spawnMs: 16000, yield: 14, maxLevel: 3 },
-      { id: 'erase',     name: 'Remove',     glyph: '✕',  cost: 0,  unlock: 0,    type: 'erase',  maxLevel: 0 },
+      { id: 'wheat',     name: 'Wheat',      cost: 1,  unlock: 0,    type: 'crop',   growMs: 8000,  yield: 2,  maxLevel: 1 },
+      { id: 'tree',      name: 'Tree',       cost: 4,  unlock: 0,    type: 'object', spawnMs: 14000, yield: 1, maxLevel: 3 },
+      { id: 'corn',      name: 'Corn',       cost: 5,  unlock: 12,   type: 'crop',   growMs: 12000, yield: 6,  maxLevel: 1 },
+      { id: 'flower',    name: 'Flower',     cost: 2,  unlock: 25,   type: 'crop',   growMs: 5000,  yield: 2,  maxLevel: 1 },
+      { id: 'cow',       name: 'Cow',        cost: 18, unlock: 60,   type: 'object', spawnMs: 11000, yield: 4, maxLevel: 3 },
+      { id: 'sunflower', name: 'Sunflower',  cost: 12, unlock: 120,  type: 'crop',   growMs: 18000, yield: 14, maxLevel: 1 },
+      { id: 'house',     name: 'House',      cost: 35, unlock: 220,  type: 'object', spawnMs: 13000, yield: 7, maxLevel: 3 },
+      { id: 'pumpkin',   name: 'Pumpkin',    cost: 25, unlock: 380,  type: 'crop',   growMs: 28000, yield: 32, maxLevel: 1 },
+      { id: 'apple',     name: 'Apple Tree', cost: 70, unlock: 700,  type: 'object', spawnMs: 16000, yield: 14, maxLevel: 3 },
+      { id: 'erase',     name: 'Remove',     cost: 0,  unlock: 0,    type: 'erase',  maxLevel: 0 },
     ];
 
     // ─────────────────────────────────────────────────────────────
@@ -371,6 +400,11 @@
     let selectedTool = null;
     let pickupGrowthStarted = false;
 
+    // Camera orbit state
+    const CAM_DIST = Math.sqrt(11 * 11 + 11 * 11); // horizontal radius (~15.55)
+    const CAM_HEIGHT = 10.5;
+    let camYaw = Math.PI / 4; // initial 45°
+
     // ─────────────────────────────────────────────────────────────
     // THREE.JS SCENE
     // ─────────────────────────────────────────────────────────────
@@ -378,26 +412,55 @@
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xfde9c4, 18, 36);
+    scene.fog = new THREE.Fog(0xfde9c4, 22, 42);
 
     // Orthographic isometric camera
     let camZoom = 1.0;
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    cam.position.set(11, 11, 11);
+    cam.position.set(Math.sin(camYaw) * CAM_DIST, CAM_HEIGHT, Math.cos(camYaw) * CAM_DIST);
     cam.lookAt(0, 0, 0);
 
     // Lights
-    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x4a6d35, 0.78));
-    const sun = new THREE.DirectionalLight(0xfff2c8, 0.95);
-    sun.position.set(8, 14, 4);
+    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6a9a4a, 0.85));
+    const sun = new THREE.DirectionalLight(0xfff2c8, 1.05);
+    sun.position.set(7, 12, 5);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -8;
+    sun.shadow.camera.right = 8;
+    sun.shadow.camera.top = 8;
+    sun.shadow.camera.bottom = -8;
+    sun.shadow.camera.near = 0.5;
+    sun.shadow.camera.far = 40;
+    sun.shadow.bias = -0.0008;
+    sun.shadow.radius = 4;
     scene.add(sun);
+
+    // Animated water moat around the island
+    const waterGeom = new THREE.PlaneGeometry(32, 32, 24, 24);
+    const waterMat = new THREE.MeshLambertMaterial({ color: 0x7dc6dc });
+    const water = new THREE.Mesh(waterGeom, waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -0.42;
+    water.receiveShadow = true;
+    scene.add(water);
+    // darker deep-water beneath / horizon
+    const deep = new THREE.Mesh(
+      new THREE.CircleGeometry(GRID * 1.7, 48),
+      new THREE.MeshBasicMaterial({ color: 0x4d96b3 })
+    );
+    deep.rotation.x = -Math.PI / 2;
+    deep.position.y = -0.55;
+    scene.add(deep);
 
     // Ground halo under island
     {
       const halo = new THREE.Mesh(
-        new THREE.CircleGeometry(GRID * 0.85, 48),
+        new THREE.CircleGeometry(GRID * 0.82, 48),
         new THREE.MeshBasicMaterial({ color: 0x3a6b2e, transparent: true, opacity: 0.18 })
       );
       halo.rotation.x = -Math.PI / 2;
@@ -405,12 +468,13 @@
       scene.add(halo);
     }
 
-    // Tile grass colors (slight variation)
-    const grassMats = [0x7eba4f, 0x73b04a, 0x86c156, 0x6fa645].map(c =>
+    // Tile grass colors (warmer, slight variation)
+    const grassMats = [0x8acb5e, 0x86c75a, 0x91d068, 0x82c557].map(c =>
       new THREE.MeshLambertMaterial({ color: c })
     );
-    const sideMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2a });
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x5e3f24 });
+    const sideMat = new THREE.MeshLambertMaterial({ color: 0x8a5d34 });
+    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x6b4624 });
+    const tuftMat = new THREE.MeshLambertMaterial({ color: 0x6fb845 });
 
     // Pre-built materials cache for sprites
     const M = {
@@ -447,6 +511,9 @@
     const cellMeshes = {};   // 'x,z' → Three.js group (tile + sprite)
     const tileMeshes = [];   // for raycasting
 
+    // Permanent homestead cottage cell — visual anchor, blocks placement
+    const HOMESTEAD = { x: 4, z: 4 };
+
     function cellKey(x, z) { return x + ',' + z; }
     function worldX(x) { return (x - (GRID - 1) / 2) * TILE; }
     function worldZ(z) { return (z - (GRID - 1) / 2) * TILE; }
@@ -457,6 +524,23 @@
       return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; };
     }
 
+    function makeTuft(seed) {
+      const g = new THREE.Group();
+      const rng = srand(seed * 13 + 9);
+      const blades = 2 + Math.floor(rng() * 3);
+      for (let i = 0; i < blades; i++) {
+        const h = 0.06 + rng() * 0.10;
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, h, 0.05), tuftMat);
+        blade.position.set((rng() - 0.5) * 0.42, h / 2, (rng() - 0.5) * 0.42);
+        blade.rotation.y = rng() * Math.PI;
+        blade.castShadow = true;
+        g.add(blade);
+      }
+      g.userData.swayPhase = rng() * Math.PI * 2;
+      g.userData.swayAmount = 0.05;
+      return g;
+    }
+
     function buildTile(x, z) {
       const group = new THREE.Group();
       const tileGeom = new THREE.BoxGeometry(TILE * 0.96, 0.36, TILE * 0.96);
@@ -464,12 +548,23 @@
       const tile = new THREE.Mesh(tileGeom, mats);
       tile.position.y = 0.18;
       tile.userData = { isTile: true, x, z };
+      tile.receiveShadow = true;
       group.add(tile);
       group.position.set(worldX(x), 0, worldZ(z));
       tileMeshes.push(tile);
-      return { group, tile, sprite: null };
+
+      // Random grass tuft decoration (skipped on homestead tile)
+      let decoration = null;
+      const r = srand(x * 31 + z * 7 + 11);
+      if (!(x === HOMESTEAD.x && z === HOMESTEAD.z) && r() < 0.5) {
+        decoration = makeTuft(x * 100 + z);
+        decoration.position.y = 0.36;
+        group.add(decoration);
+      }
+      return { group, tile, sprite: null, decoration };
     }
 
+    // Build all 64 tiles
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
         const c = buildTile(x, z);
@@ -801,18 +896,93 @@
     }
 
     function makeSprite(toolId, level, stage) {
+      let g;
       switch (toolId) {
-        case 'wheat':     return makeWheat(stage);
-        case 'corn':      return makeCorn(stage);
-        case 'flower':    return makeFlower(stage);
-        case 'sunflower': return makeSunflower(stage);
-        case 'pumpkin':   return makePumpkin(stage);
-        case 'tree':      return makeTree(level);
-        case 'apple':     return makeApple(level);
-        case 'cow':       return makeCow(level);
-        case 'house':     return makeHouse(level);
+        case 'wheat':     g = makeWheat(stage); break;
+        case 'corn':      g = makeCorn(stage); break;
+        case 'flower':    g = makeFlower(stage); break;
+        case 'sunflower': g = makeSunflower(stage); break;
+        case 'pumpkin':   g = makePumpkin(stage); break;
+        case 'tree':      g = makeTree(level); break;
+        case 'apple':     g = makeApple(level); break;
+        case 'cow':       g = makeCow(level); break;
+        case 'house':     g = makeHouse(level); break;
+        default: g = new THREE.Group();
       }
-      return new THREE.Group();
+      // Enable shadow casting on all meshes
+      g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      // Sway flag for plant-ish things
+      const SWAY = { wheat: 0.05, corn: 0.04, flower: 0.06, sunflower: 0.05, tree: 0.03, apple: 0.03 };
+      if (SWAY[toolId]) {
+        g.userData.sway = true;
+        g.userData.swayAmount = SWAY[toolId];
+        g.userData.swayPhase = Math.random() * Math.PI * 2;
+      }
+      return g;
+    }
+
+    // Centerpiece: a larger, decorative cottage on the homestead tile
+    function makeHomestead() {
+      const g = new THREE.Group();
+      const s = 1.45;
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.62 * s, 0.5 * s, 0.5 * s), M.houseWall);
+      wall.position.y = 0.25 * s;
+      g.add(wall);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(0.55 * s, 0.4 * s, 4), M.houseRoof);
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = 0.5 * s + 0.2 * s;
+      g.add(roof);
+      // door
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.14 * s, 0.24 * s, 0.04 * s), M.door);
+      door.position.set(0, 0.12 * s, 0.26 * s);
+      g.add(door);
+      // door arch
+      const arch = new THREE.Mesh(new THREE.BoxGeometry(0.18 * s, 0.03 * s, 0.05 * s), M.houseRoof);
+      arch.position.set(0, 0.245 * s, 0.27 * s);
+      g.add(arch);
+      // two windows
+      const winGeom = new THREE.BoxGeometry(0.14 * s, 0.14 * s, 0.04 * s);
+      const winL = new THREE.Mesh(winGeom, M.window); winL.position.set(-0.2 * s, 0.32 * s, 0.26 * s); g.add(winL);
+      const winR = new THREE.Mesh(winGeom, M.window); winR.position.set(0.2 * s, 0.32 * s, 0.26 * s); g.add(winR);
+      // window crosses
+      const crossH = new THREE.MeshLambertMaterial({ color: 0xf2e1bf });
+      [-0.2, 0.2].forEach(xx => {
+        const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.012 * s, 0.14 * s, 0.05 * s), crossH);
+        vbar.position.set(xx * s, 0.32 * s, 0.265 * s);
+        g.add(vbar);
+        const hbar = new THREE.Mesh(new THREE.BoxGeometry(0.14 * s, 0.012 * s, 0.05 * s), crossH);
+        hbar.position.set(xx * s, 0.32 * s, 0.265 * s);
+        g.add(hbar);
+      });
+      // chimney
+      const chim = new THREE.Mesh(new THREE.BoxGeometry(0.1 * s, 0.26 * s, 0.1 * s), M.houseRoof);
+      chim.position.set(-0.18 * s, 0.7 * s, -0.05 * s);
+      g.add(chim);
+      // smoke puffs (bounded loop in RAF)
+      const smokeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+      const smokes = [];
+      for (let i = 0; i < 3; i++) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.07 + i * 0.015, 8, 6), smokeMat.clone());
+        puff.userData.t0 = i / 3;
+        g.add(puff);
+        smokes.push(puff);
+      }
+      g.userData.smokes = smokes;
+      g.userData.chimneyX = -0.18 * s;
+      g.userData.chimneyY = 0.83 * s;
+      g.userData.chimneyZ = -0.05 * s;
+      // shadows
+      g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+      return g;
+    }
+
+    // Place the homestead
+    {
+      const homestead = makeHomestead();
+      const homeCell = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
+      homestead.position.y = 0.36;
+      homeCell.group.add(homestead);
+      homeCell.homestead = homestead;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -835,6 +1005,9 @@
         // Drop-in animation
         group.userData.dropFrom = 1.4;
         group.userData.dropAt = performance.now();
+        if (cm.decoration) cm.decoration.visible = false;
+      } else {
+        if (cm.decoration) cm.decoration.visible = true;
       }
     }
 
@@ -847,6 +1020,11 @@
     function placeAt(x, z, toolId) {
       const tool = TOOLS.find(t => t.id === toolId);
       if (!tool || tool.type === 'erase') return false;
+      if (x === HOMESTEAD.x && z === HOMESTEAD.z) {
+        showToast('Home base — build around it');
+        playSfx('bonk');
+        return false;
+      }
       if (gs.coins < tool.cost) {
         flashCantAfford();
         return false;
@@ -897,6 +1075,10 @@
     }
 
     function eraseAt(x, z) {
+      if (x === HOMESTEAD.x && z === HOMESTEAD.z) {
+        playSfx('bonk');
+        return false;
+      }
       const c = getCell(x, z);
       if (!c) {
         playSfx('bonk');
@@ -1090,27 +1272,18 @@
       return null;
     }
 
-    function onPointer(e) {
-      // Ignore if touch is on dock (handled by dock children)
-      if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
-      if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
+    // Drag-to-rotate state + tap disambiguation
+    const DRAG_THRESHOLD = 8;
+    let pointerStart = null;
+    let isDragging = false;
 
-      kickStart();
-
-      const hit = pickAt(e.clientX, e.clientY);
+    function performTap(clientX, clientY) {
+      cam.updateMatrixWorld(true);
+      const hit = pickAt(clientX, clientY);
       if (!hit) return;
-
       hideHint();
-
-      if (hit.type === 'pickup') {
-        collectPickup(hit.pickup);
-        return;
-      }
-
-      // hit.type === 'cell'
+      if (hit.type === 'pickup') { collectPickup(hit.pickup); return; }
       const c = getCell(hit.x, hit.z);
-
-      // Ripe crop always harvestable on tap
       if (c) {
         const tool = TOOLS.find(t => t.id === c.tool);
         if (tool && tool.type === 'crop' && c.stage === 2) {
@@ -1118,20 +1291,44 @@
           return;
         }
       }
-
-      // Erase mode
-      if (selectedTool === 'erase') {
-        eraseAt(hit.x, hit.z);
-        return;
-      }
-
-      // Place / upgrade
-      if (selectedTool) {
-        placeAt(hit.x, hit.z, selectedTool);
-      }
+      if (selectedTool === 'erase') { eraseAt(hit.x, hit.z); return; }
+      if (selectedTool) placeAt(hit.x, hit.z, selectedTool);
     }
 
-    canvas.addEventListener('pointerdown', onPointer);
+    function onPointerDown(e) {
+      if (e.target && e.target.closest && e.target.closest('#dock-wrap')) return;
+      if (e.target && e.target.closest && e.target.closest('#resume-overlay')) return;
+      kickStart();
+      pointerStart = { x: e.clientX, y: e.clientY, yaw0: camYaw, t: performance.now() };
+      isDragging = false;
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
+    }
+    function onPointerMove(e) {
+      if (!pointerStart) return;
+      const dx = e.clientX - pointerStart.x;
+      const dy = e.clientY - pointerStart.y;
+      if (!isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        hideHint();
+      }
+      if (isDragging) {
+        camYaw = pointerStart.yaw0 + dx * 0.006;
+      }
+    }
+    function onPointerUp(e) {
+      if (!pointerStart) return;
+      const wasDragging = isDragging;
+      const sx = pointerStart.x, sy = pointerStart.y;
+      pointerStart = null;
+      isDragging = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      if (wasDragging) return;
+      performTap(e.clientX || sx, e.clientY || sy);
+    }
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
     // ─────────────────────────────────────────────────────────────
     // DOCK UI
@@ -1150,14 +1347,14 @@
         if (selectedTool === tool.id) div.classList.add('selected');
         const glyph = document.createElement('div');
         glyph.className = 'glyph';
-        glyph.textContent = tool.glyph;
+        glyph.innerHTML = ICONS[tool.id] || '';
         div.appendChild(glyph);
         const cost = document.createElement('div');
         cost.className = 'cost';
         if (tool.type === 'erase') {
           cost.textContent = 'remove';
         } else if (!unlocked) {
-          cost.innerHTML = `<span class="dot"></span>${tool.unlock}`;
+          cost.innerHTML = `<span class="lock-mini">${ICONS.lock}</span>${tool.unlock}`;
         } else {
           cost.innerHTML = `<span class="dot"></span>${tool.cost}`;
         }
@@ -1186,7 +1383,7 @@
       for (const tool of TOOLS) {
         if (tool.unlock > 0 && !gs.seenUnlocks[tool.id] && gs.coins >= tool.unlock) {
           gs.seenUnlocks[tool.id] = true;
-          showToast(`${tool.glyph}  ${tool.name} unlocked!`, true);
+          showToast(`<span class="toast-ico">${ICONS[tool.id] || ICONS.sparkle}</span>${tool.name} unlocked`, true);
           playSfx('unlock');
         }
       }
@@ -1215,10 +1412,10 @@
     // ─────────────────────────────────────────────────────────────
     // TOAST + FLOAT NUMBER
     // ─────────────────────────────────────────────────────────────
-    function showToast(text, unlock) {
+    function showToast(html, unlock) {
       const t = document.createElement('div');
       t.className = 'toast-bubble' + (unlock ? ' unlock' : '');
-      t.textContent = text;
+      t.innerHTML = html;
       document.getElementById('toast').appendChild(t);
       setTimeout(() => t.remove(), 2400);
     }
@@ -1276,9 +1473,11 @@
       if (now - lastDraw < FRAME_MS - 1) return;
       lastDraw = now;
 
-      // Drop-in animation on sprites
+      // Drop-in animation + sway on sprites; decoration sway
+      const swayT = now / 1500;
       for (const k in cellMeshes) {
-        const sp = cellMeshes[k].sprite;
+        const cm = cellMeshes[k];
+        const sp = cm.sprite;
         if (sp && sp.userData.dropAt) {
           const t = (now - sp.userData.dropAt) / 320;
           if (t >= 1) {
@@ -1290,7 +1489,6 @@
             sp.scale.setScalar(0.7 + 0.3 * e);
           }
         }
-        // glow pulse on ripen
         if (sp && sp.userData.glowAt) {
           const t = (now - sp.userData.glowAt) / 500;
           if (t >= 1) sp.userData.glowAt = 0;
@@ -1298,6 +1496,32 @@
             const e = Math.sin(t * Math.PI);
             sp.scale.setScalar(1 + 0.08 * e);
           }
+        }
+        // wind sway on plants
+        if (sp && sp.userData.sway && !sp.userData.dropAt) {
+          sp.rotation.z = Math.sin(swayT + sp.userData.swayPhase) * sp.userData.swayAmount;
+        }
+        // tuft sway
+        if (cm.decoration && cm.decoration.visible) {
+          cm.decoration.rotation.z = Math.sin(swayT + cm.decoration.userData.swayPhase) * cm.decoration.userData.swayAmount;
+        }
+      }
+
+      // Homestead smoke puffs
+      const homeCell = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
+      if (homeCell && homeCell.homestead) {
+        const hs = homeCell.homestead;
+        const sm = hs.userData.smokes;
+        const cx = hs.userData.chimneyX, cy = hs.userData.chimneyY, cz = hs.userData.chimneyZ;
+        for (let i = 0; i < sm.length; i++) {
+          const puff = sm[i];
+          const tt = ((now / 2600) + puff.userData.t0) % 1;
+          puff.position.x = cx + Math.sin(tt * 6) * 0.07;
+          puff.position.y = cy + tt * 0.7;
+          puff.position.z = cz - tt * 0.05;
+          const opacity = (1 - tt) * 0.7 + 0.05;
+          puff.material.opacity = opacity;
+          puff.scale.setScalar(0.6 + tt * 0.8);
         }
       }
 
@@ -1308,12 +1532,27 @@
         p.mesh.rotation.y = t * 1.6;
       }
 
+      // Water ripple (gentle vertex displacement)
+      {
+        const pos = waterGeom.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const wx = pos.getX(i);
+          const wy = pos.getY(i);
+          const dz = Math.sin((wx + now / 700) * 0.85) * 0.06
+                   + Math.cos((wy + now / 620) * 0.7)  * 0.05;
+          pos.setZ(i, dz);
+        }
+        pos.needsUpdate = true;
+      }
+
       // Tick growth/spawning
       tick(now);
 
-      // Gentle camera bob (bounded, looping)
-      cam.position.x = 11 + Math.sin(now / 4000) * 0.12;
-      cam.position.z = 11 + Math.cos(now / 4500) * 0.1;
+      // Camera orbit (drag-driven) + tiny ambient bob
+      const yaw = camYaw + Math.sin(now / 6000) * 0.003;
+      cam.position.x = Math.sin(yaw) * CAM_DIST;
+      cam.position.z = Math.cos(yaw) * CAM_DIST;
+      cam.position.y = CAM_HEIGHT + Math.sin(now / 4500) * 0.08;
       cam.lookAt(0, 0, 0);
 
       renderer.render(scene, cam);
@@ -1514,6 +1753,7 @@
       for (const k in (data.cells || {})) {
         const sc = data.cells[k];
         const [x, z] = k.split(',').map(Number);
+        if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue; // skip homestead tile (legacy saves)
         const tool = TOOLS.find(t => t.id === sc.tool);
         if (!tool) continue;
         const cell = {
@@ -1544,6 +1784,10 @@
     // RESUME DIALOG / INIT (TDZ-safe: this runs after everything above)
     // ─────────────────────────────────────────────────────────────
     (function init() {
+      // Inject SVG into the resume dialog icon
+      const resumeIco = document.getElementById('resume-ico');
+      if (resumeIco) resumeIco.innerHTML = ICONS.wheat;
+
       const saved = readSave();
       const hasMeaningful = saved && (saved.coins !== STARTING_COINS || Object.keys(saved.cells || {}).length > 0);
       renderDock();
@@ -1551,8 +1795,8 @@
       if (hasMeaningful) {
         const overlay = document.getElementById('resume-overlay');
         const total = Object.keys(saved.cells || {}).length;
-        document.getElementById('resume-sub').textContent =
-          `${saved.coins} 🪙 · ${total} tiles planted`;
+        document.getElementById('resume-sub').innerHTML =
+          `<span class="resume-coin">${ICONS.coin}</span> ${saved.coins} &middot; ${total} tiles planted`;
         overlay.classList.add('show');
         document.getElementById('resume-yes').addEventListener('pointerdown', () => {
           applySave(saved);
