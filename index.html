@@ -192,6 +192,40 @@
       0 1px 2px rgba(20, 30, 50, 0.05);
   }
 
+  /* Shuffle (random layout) — sits to the left of the weather picker */
+  #shuffle {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top));
+    /* Sit just left of #weather. #weather is at right:14px and is
+       ~186px wide (5 × 34 + 4 × 2 gap + 4 × 2 padding); add 6px gap. */
+    right: calc(14px + 186px + 6px);
+    z-index: 20;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
+    border-radius: 22px;
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    box-shadow: var(--chip-shadow);
+    color: var(--ink-soft);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.08s;
+    font: inherit;
+  }
+  #shuffle svg { width: 20px; height: 20px; display: block; }
+  #shuffle:active { transform: scale(0.92); }
+  #shuffle.spin svg { animation: shuffle-spin 0.6s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes shuffle-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
   /* Watermark */
   #watermark {
     position: absolute;
@@ -316,6 +350,16 @@
     <button data-mode="dusk"  aria-label="Sunset"></button>
     <button data-mode="night" aria-label="Night"></button>
   </div>
+
+  <button id="shuffle" aria-label="Random farm layout" title="Random layout">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 3h5v5"/>
+      <path d="M4 20L21 3"/>
+      <path d="M21 16v5h-5"/>
+      <path d="M15 15l6 6"/>
+      <path d="M4 4l5 5"/>
+    </svg>
+  </button>
 
   <img id="watermark" src="img/aigram.svg" alt="">
 
@@ -1339,7 +1383,8 @@
       fence: 4, well: 2, lantern: 2, water: 2,
     };
 
-    function placeAt(x, z, kind) {
+    function placeAt(x, z, kind, opts) {
+      opts = opts || {};
       const existing = getCell(x, z);
       // Same kind → cycle through levels (1 → max → 1)
       if (existing && existing.kind === kind) {
@@ -1351,27 +1396,170 @@
           existing.level += 1;
         }
         setSprite(x, z, makeSprite(kind, existing.level, existing.seed));
-        playSfx('place');
-        saveSoon();
+        if (!opts.silent) playSfx('place');
+        if (!opts.skipSave) saveSoon();
         return true;
       }
       // Different kind → replace
       const seed = Math.floor(Math.random() * 1e6);
       gs.cells[cellKey(x, z)] = { kind, level: 1, seed };
       setSprite(x, z, makeSprite(kind, 1, seed));
-      playSfx('place');
-      saveSoon();
+      if (!opts.silent) playSfx('place');
+      if (!opts.skipSave) saveSoon();
       return true;
     }
 
-    function eraseAt(x, z) {
+    function eraseAt(x, z, opts) {
+      opts = opts || {};
       const c = getCell(x, z);
-      if (!c) { playSfx('bonk'); return false; }
+      if (!c) {
+        if (!opts.silent) playSfx('bonk');
+        return false;
+      }
       delete gs.cells[cellKey(x, z)];
       setSprite(x, z, null);
+      if (!opts.silent) playSfx('place');
+      if (!opts.skipSave) saveSoon();
+      return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // AUTO-PLACE & RANDOM LAYOUT
+    // ─────────────────────────────────────────────────────────────
+    function neighbors(x, z) {
+      const out = [];
+      const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      for (const [dx, dz] of dirs) {
+        const nx = x + dx, nz = z + dz;
+        if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
+        out.push(getCell(nx, nz));
+      }
+      return out;
+    }
+    function countAdj(x, z, kind) {
+      let n = 0;
+      for (const c of neighbors(x, z)) if (c && c.kind === kind) n++;
+      return n;
+    }
+    function countAdjAny(x, z) {
+      let n = 0;
+      for (const c of neighbors(x, z)) if (c) n++;
+      return n;
+    }
+
+    // Score a candidate empty tile for the given kind.
+    // Higher = more natural-looking spot. Top candidates are then
+    // sampled with a little jitter so repeated taps stay varied.
+    function scoreSpot(kind, x, z) {
+      const edge = Math.min(x, z, GRID - 1 - x, GRID - 1 - z);
+      const adjHouse = countAdj(x, z, 'house');
+      const adjAny = countAdjAny(x, z);
+      switch (kind) {
+        case 'tree':
+          return (edge === 0 ? 2.0 : edge === 1 ? 1.0 : 0)
+            + countAdj(x, z, 'tree') * 0.4
+            - adjHouse * 1.2;
+        case 'bush':
+          return countAdj(x, z, 'tree') * 0.6
+            + countAdj(x, z, 'bush') * 0.4
+            - adjHouse * 0.3;
+        case 'flower':
+          return 0.2 + countAdj(x, z, 'flower') * 0.5
+            - adjHouse * 0.2;
+        case 'wheat':
+          return countAdj(x, z, 'wheat') * 0.9
+            + (edge >= 1 ? 0.3 : 0);
+        case 'sunflower':
+          return 0.3 + countAdj(x, z, 'sunflower') * 0.6
+            - countAdj(x, z, 'tree') * 0.3;
+        case 'pumpkin':
+          return 0.3 + countAdj(x, z, 'pumpkin') * 0.6;
+        case 'house':
+          return (edge >= 2 ? 1.2 : 0)
+            - countAdj(x, z, 'house') * 2.0
+            - adjAny * 0.15;
+        case 'fence':
+          return adjHouse * 1.0
+            + countAdj(x, z, 'fence') * 0.6
+            + countAdj(x, z, 'well') * 0.3;
+        case 'well':
+          return adjHouse * 0.7 + adjAny * 0.2
+            - countAdj(x, z, 'well') * 2.0;
+        case 'lantern':
+          return adjHouse * 0.6 + countAdj(x, z, 'fence') * 0.4
+            - countAdj(x, z, 'lantern') * 1.0;
+        case 'water':
+          return countAdj(x, z, 'water') * 0.8
+            + countAdj(x, z, 'wheat') * 0.3
+            - adjHouse * 0.4;
+        default:
+          return 0;
+      }
+    }
+
+    function pickAutoSpot(kind) {
+      const empty = [];
+      for (let x = 0; x < GRID; x++) {
+        for (let z = 0; z < GRID; z++) {
+          if (!getCell(x, z)) empty.push({ x, z });
+        }
+      }
+      if (empty.length === 0) return null;
+      const scored = empty.map(p => ({
+        x: p.x, z: p.z,
+        s: scoreSpot(kind, p.x, p.z) + Math.random() * 0.5,
+      }));
+      scored.sort((a, b) => b.s - a.s);
+      const top = scored.slice(0, Math.min(4, scored.length));
+      return top[Math.floor(Math.random() * top.length)];
+    }
+
+    function autoPlace(kind, opts) {
+      opts = opts || {};
+      if (kind === 'erase') return false;
+      const spot = pickAutoSpot(kind);
+      if (!spot) {
+        if (!opts.silent) {
+          playSfx('bonk');
+          showToast('Farm is full');
+        }
+        return false;
+      }
+      placeAt(spot.x, spot.z, kind, opts);
+      return true;
+    }
+
+    function randomFarm() {
+      // Wipe everything (including initial homestead) silently
+      for (let x = 0; x < GRID; x++) {
+        for (let z = 0; z < GRID; z++) {
+          if (getCell(x, z)) eraseAt(x, z, { silent: true, skipSave: true });
+        }
+      }
+      const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+      // Order matters: anchors first (houses), then accents, then
+      // foliage filler. Each autoPlace re-scores against the current
+      // state so later kinds naturally cluster around earlier ones.
+      const plan = [
+        ['house',     rnd(1, 2)],
+        ['fence',     rnd(2, 4)],
+        ['well',      rnd(0, 1)],
+        ['lantern',   rnd(1, 2)],
+        ['tree',      rnd(4, 7)],
+        ['bush',      rnd(2, 4)],
+        ['flower',    rnd(3, 6)],
+        ['wheat',     rnd(2, 4)],
+        ['sunflower', rnd(1, 2)],
+        ['pumpkin',   rnd(1, 2)],
+        ['water',     Math.random() < 0.45 ? 1 : 0],
+      ];
+      for (const [kind, count] of plan) {
+        for (let i = 0; i < count; i++) {
+          if (!autoPlace(kind, { silent: true, skipSave: true })) break;
+        }
+      }
       playSfx('place');
       saveSoon();
-      return true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -1488,9 +1676,18 @@
         div.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           kickStart();
-          selectedTool = (selectedTool === tool.id) ? null : tool.id;
-          renderDock();
           hideHint();
+          // Erase keeps its toggle behavior — auto-erasing would be destructive.
+          if (tool.id === 'erase') {
+            selectedTool = (selectedTool === 'erase') ? null : 'erase';
+            renderDock();
+            return;
+          }
+          // Build tools: each tap selects the tool AND drops one item
+          // on the best-looking empty tile. Manual tile tapping still works.
+          selectedTool = tool.id;
+          renderDock();
+          autoPlace(tool.id);
         });
         dockEl.appendChild(div);
       }
@@ -1948,6 +2145,21 @@
     (function init() {
       const resumeIco = document.getElementById('resume-ico');
       if (resumeIco) resumeIco.innerHTML = ICONS.tree;
+
+      const shuffleBtn = document.getElementById('shuffle');
+      if (shuffleBtn) {
+        shuffleBtn.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          kickStart();
+          hideHint();
+          shuffleBtn.classList.remove('spin');
+          // Force reflow so the animation restarts on rapid taps
+          void shuffleBtn.offsetWidth;
+          shuffleBtn.classList.add('spin');
+          randomFarm();
+        });
+      }
+
       // Default scene: one little red cottage in the middle
       placeInitialHomestead();
       const saved = readSave();
