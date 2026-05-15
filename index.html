@@ -9,16 +9,18 @@
     color-scheme: light;
     --sky: #f4ede0;
     --ink: #3a2f1e;
-    --ink-soft: #8d847a;
-    --ink-mute: #a89e8d;
-    --chip-bg: rgba(255, 250, 245, 0.5);
-    --chip-bg-hot: rgba(255, 255, 255, 0.82);
-    --chip-border: rgba(255, 255, 255, 0.6);
+    --ink-soft: #6b6155;
+    --ink-mute: #968d80;
+    /* These three are remixed by JS each frame based on time-of-day —
+       more opaque at night so the controls stay legible on a dark sky. */
+    --chip-bg: rgba(255, 250, 245, 0.78);
+    --chip-bg-hot: rgba(255, 255, 255, 0.95);
+    --chip-border: rgba(255, 255, 255, 0.7);
     --chip-shadow:
       0 1px 0 rgba(255, 255, 255, 0.85) inset,
       0 -1px 0 rgba(120, 130, 150, 0.1) inset,
       0 1px 2px rgba(20, 30, 50, 0.05),
-      0 12px 36px -12px rgba(40, 50, 80, 0.22);
+      0 12px 36px -12px rgba(40, 50, 80, 0.30);
   }
   * { box-sizing: border-box; }
   html, body {
@@ -561,6 +563,17 @@
           M.lampGlass.emissiveIntensity = 0.25 + (1 - Math.min(1, p.sunI)) * 1.2;
         }
       } catch {}
+      // UI chrome adapts to TOD: stays legible on dark sky
+      const darkness = 1 - Math.min(1, p.sunI / 1.0);          // 0 day → 1 night
+      const chipBgAlpha     = 0.72 + darkness * 0.22;          // 0.72 → 0.94
+      const chipBgHotAlpha  = 0.92 + darkness * 0.06;          // 0.92 → 0.98
+      const chipBorderAlpha = 0.55 + darkness * 0.30;          // 0.55 → 0.85
+      // Tint subtly warmer in daylight, neutral white at night for max contrast
+      const wb = Math.round(245 + darkness * 10);   // warm-cream → near-white
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty('--chip-bg',      `rgba(255, 252, ${wb}, ${chipBgAlpha.toFixed(2)})`);
+      rootStyle.setProperty('--chip-bg-hot',  `rgba(255, 255, 255, ${chipBgHotAlpha.toFixed(2)})`);
+      rootStyle.setProperty('--chip-border',  `rgba(255, 255, 255, ${chipBorderAlpha.toFixed(2)})`);
     }
     applyTod();
 
