@@ -493,8 +493,8 @@
     // ─────────────────────────────────────────────────────────────
     // TIME-OF-DAY (auto cycle)
     // ─────────────────────────────────────────────────────────────
-    // Random start somewhere between 7AM and 8PM so repeated loads land in different lighting
-    let todMinutes = 420 + Math.random() * 780;
+    // Start every session at golden-hour dusk (7:30PM)
+    let todMinutes = 1170;
     const TOD_CYCLE_MS = 90000; // 1.5 real minutes = 24 game hours
     let lastTodAdvance = performance.now();
 
