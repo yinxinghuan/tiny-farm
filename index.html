@@ -2022,6 +2022,229 @@
       if (ambientStarted || !actx) return;
       ambientStarted = true;
       scheduleSwell();
+      scheduleAnimalCall();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ANIMAL CALLS — bird / cow / sheep / chicken / owl
+    // Sparse, stereo-panned, time-of-day weighted. Sits underneath
+    // the swell pad and the SFX bus.
+    // ─────────────────────────────────────────────────────────────
+    function timeOfDayPhase() {
+      const h = (todMinutes / 60) % 24;
+      if (h >= 4 && h < 7)  return 'dawn';
+      if (h >= 7 && h < 18) return 'day';
+      if (h >= 18 && h < 21) return 'dusk';
+      return 'night';
+    }
+    const ANIMAL_WEIGHTS = {
+      dawn:  { bird: 7, cow: 1, sheep: 1, chicken: 1, owl: 0 },
+      day:   { bird: 4, cow: 3, sheep: 3, chicken: 2, owl: 0 },
+      dusk:  { bird: 3, cow: 2, sheep: 2, chicken: 1, owl: 1 },
+      night: { bird: 1, cow: 0, sheep: 0, chicken: 0, owl: 3 },
+    };
+    function pickAnimal() {
+      const w = ANIMAL_WEIGHTS[timeOfDayPhase()];
+      const total = Object.values(w).reduce((a, b) => a + b, 0);
+      let r = Math.random() * total;
+      for (const k of Object.keys(w)) {
+        r -= w[k];
+        if (r < 0) return k;
+      }
+      return 'bird';
+    }
+
+    function makeAnimalBus() {
+      const ctx = actx;
+      const pan = (typeof ctx.createStereoPanner === 'function')
+        ? ctx.createStereoPanner() : null;
+      const gain = ctx.createGain();
+      gain.gain.value = 1;
+      if (pan) {
+        pan.pan.value = (Math.random() * 1.4) - 0.7;
+        gain.connect(pan); pan.connect(masterGain);
+      } else {
+        gain.connect(masterGain);
+      }
+      return gain;
+    }
+
+    function animalNoiseBuf(seconds, shape) {
+      const sr = actx.sampleRate;
+      const len = Math.max(1, Math.floor(sr * seconds));
+      const buf = actx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        let v = Math.random() * 2 - 1;
+        if (shape) v *= shape(i / len);
+        d[i] = v;
+      }
+      return buf;
+    }
+
+    function playBird(busOverride) {
+      // 2–4 quick chirps, each a fast pitch glide ~2.5–4.5kHz
+      const ctx = actx;
+      const bus = busOverride || makeAnimalBus();
+      const chirps = 2 + Math.floor(Math.random() * 3);
+      const pitchHi = 3500 + Math.random() * 1500;
+      const pitchLo = pitchHi - (700 + Math.random() * 800);
+      let t = ctx.currentTime + 0.02;
+      for (let i = 0; i < chirps; i++) {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        const g = ctx.createGain();
+        const dur = 0.06 + Math.random() * 0.05;
+        o.frequency.setValueAtTime(pitchLo, t);
+        o.frequency.exponentialRampToValueAtTime(pitchHi, t + dur * 0.5);
+        o.frequency.exponentialRampToValueAtTime(pitchLo * 0.9, t + dur);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(bus);
+        o.start(t); o.stop(t + dur + 0.02);
+        t += dur + 0.05 + Math.random() * 0.08;
+      }
+    }
+
+    function playCow() {
+      // Low moo — sawtooth 80→55Hz, ~0.7s, dark formants
+      const ctx = actx;
+      const bus = makeAnimalBus();
+      const t = ctx.currentTime + 0.02;
+      const dur = 0.7 + Math.random() * 0.25;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(85, t);
+      o.frequency.exponentialRampToValueAtTime(60, t + dur * 0.7);
+      o.frequency.exponentialRampToValueAtTime(55, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.18, t + dur * 0.65);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      const fA = ctx.createBiquadFilter();
+      fA.type = 'bandpass'; fA.frequency.value = 320; fA.Q.value = 4;
+      const fB = ctx.createBiquadFilter();
+      fB.type = 'bandpass'; fB.frequency.value = 850; fB.Q.value = 5;
+      const mix = ctx.createGain(); mix.gain.value = 1;
+      o.connect(fA); o.connect(fB);
+      fA.connect(mix); fB.connect(mix);
+      mix.connect(g); g.connect(bus);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    function playSheep() {
+      // Bleat — sawtooth ~270Hz with 18Hz tremolo (the "baa-a-a"),
+      // bright mid formants, ~0.55s
+      const ctx = actx;
+      const bus = makeAnimalBus();
+      const t = ctx.currentTime + 0.02;
+      const dur = 0.5 + Math.random() * 0.2;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(280 + Math.random() * 40, t);
+      o.frequency.exponentialRampToValueAtTime(240, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      // tremolo
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 16 + Math.random() * 6;
+      const lfoG = ctx.createGain();
+      lfoG.gain.value = 0.08;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+      const fA = ctx.createBiquadFilter();
+      fA.type = 'bandpass'; fA.frequency.value = 750; fA.Q.value = 6;
+      const fB = ctx.createBiquadFilter();
+      fB.type = 'bandpass'; fB.frequency.value = 1700; fB.Q.value = 6;
+      const mix = ctx.createGain(); mix.gain.value = 1;
+      o.connect(fA); o.connect(fB);
+      fA.connect(mix); fB.connect(mix);
+      mix.connect(g); g.connect(bus);
+      lfo.start(t); o.start(t);
+      lfo.stop(t + dur + 0.05); o.stop(t + dur + 0.05);
+    }
+
+    function playChicken() {
+      // 2–3 short clucks: noise burst + small 220Hz tone, ~60ms each
+      const ctx = actx;
+      const bus = makeAnimalBus();
+      const clucks = 2 + Math.floor(Math.random() * 2);
+      let t = ctx.currentTime + 0.02;
+      for (let i = 0; i < clucks; i++) {
+        const dur = 0.06;
+        const src = ctx.createBufferSource();
+        src.buffer = animalNoiseBuf(dur, x => Math.exp(-x * 8));
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(f); f.connect(g); g.connect(bus);
+        src.start(t);
+        // accompanying low tone
+        const o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.value = 200 + Math.random() * 40;
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(0.08, t);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(og); og.connect(bus);
+        o.start(t); o.stop(t + dur + 0.02);
+        t += 0.13 + Math.random() * 0.08;
+      }
+    }
+
+    function playOwl() {
+      // Two-tone hoo-hoo, low and round
+      const ctx = actx;
+      const bus = makeAnimalBus();
+      const t0 = ctx.currentTime + 0.02;
+      function hoot(at) {
+        const dur = 0.32;
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(330, at);
+        o.frequency.exponentialRampToValueAtTime(300, at + dur);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(0.16, at + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+        // soft body via 2nd partial
+        const o2 = ctx.createOscillator();
+        o2.type = 'sine';
+        o2.frequency.value = 660;
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.04, at);
+        g2.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+        o.connect(g); o2.connect(g2);
+        g.connect(bus); g2.connect(bus);
+        o.start(at); o.stop(at + dur + 0.02);
+        o2.start(at); o2.stop(at + dur + 0.02);
+      }
+      hoot(t0);
+      hoot(t0 + 0.55);
+    }
+
+    const ANIMAL_FN = {
+      bird: playBird, cow: playCow, sheep: playSheep,
+      chicken: playChicken, owl: playOwl,
+    };
+
+    function scheduleAnimalCall() {
+      if (!actx) return;
+      const delay = 4 + Math.random() * 10; // 4-14s between calls
+      setTimeout(() => {
+        if (!actx || actx.state !== 'running') {
+          scheduleAnimalCall();
+          return;
+        }
+        const kind = pickAnimal();
+        try { ANIMAL_FN[kind](); } catch {}
+        scheduleAnimalCall();
+      }, delay * 1000);
     }
     function scheduleSwell() {
       if (!actx) return;
