@@ -495,7 +495,7 @@
     // ─────────────────────────────────────────────────────────────
     // Random start somewhere between 7AM and 8PM so repeated loads land in different lighting
     let todMinutes = 420 + Math.random() * 780;
-    const TOD_CYCLE_MS = 180000; // 3 real minutes = 24 game hours
+    const TOD_CYCLE_MS = 90000; // 1.5 real minutes = 24 game hours
     let lastTodAdvance = performance.now();
 
     const TOD_ANCHORS = [
