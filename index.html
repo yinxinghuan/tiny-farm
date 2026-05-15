@@ -907,8 +907,10 @@
       return g;
     }
 
-    function makeHouse(level = 1, palette) {
-      const pal = palette || (Math.random() < 0.5 ? 'red' : 'blue');
+    function makeHouse(level = 1, seed) {
+      // Deterministic palette: even seed → red, odd → blue
+      const pal = (seed != null) ? ((seed % 2 === 0) ? 'red' : 'blue')
+                                  : (Math.random() < 0.5 ? 'red' : 'blue');
       const roof = pal === 'red' ? M.roofRed : M.roofBlue;
       const roofD = pal === 'red' ? M.roofRedD : M.roofBlueD;
       const L = Math.max(1, Math.min(MAX_LEVEL, level));
@@ -1286,7 +1288,7 @@
       if (kind === 'wheat')     return makeWheat(level);
       if (kind === 'sunflower') return makeSunflower(level);
       if (kind === 'pumpkin')   return makePumpkin(level);
-      if (kind === 'house')     return makeHouse(level);
+      if (kind === 'house')     return makeHouse(level, seed);
       if (kind === 'fence')     return makeFence(level);
       if (kind === 'well')      return makeWell(level);
       if (kind === 'lantern')   return makeLantern(level);
@@ -1295,14 +1297,12 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // HOMESTEAD (permanent center cottage)
+    // INITIAL CENTERPIECE (a regular house cell — fully editable)
     // ─────────────────────────────────────────────────────────────
-    {
-      const homestead = makeHouse(3, 'red');
-      homestead.position.y = 0.36;
-      const hc = cellMeshes[cellKey(HOMESTEAD.x, HOMESTEAD.z)];
-      hc.group.add(homestead);
-      hc.homestead = homestead;
+    function placeInitialHomestead() {
+      const seed = 13; // fixed seed → consistent red-roof palette on first load
+      gs.cells[cellKey(HOMESTEAD.x, HOMESTEAD.z)] = { kind: 'house', level: 3, seed };
+      setSprite(HOMESTEAD.x, HOMESTEAD.z, makeSprite('house', 3, seed));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -1336,11 +1336,6 @@
     };
 
     function placeAt(x, z, kind) {
-      if (x === HOMESTEAD.x && z === HOMESTEAD.z) {
-        showToast('Home base — build around it');
-        playSfx('bonk');
-        return false;
-      }
       const existing = getCell(x, z);
       // Same kind → cycle through levels (1 → max → 1)
       if (existing && existing.kind === kind) {
@@ -1366,10 +1361,6 @@
     }
 
     function eraseAt(x, z) {
-      if (x === HOMESTEAD.x && z === HOMESTEAD.z) {
-        playSfx('bonk');
-        return false;
-      }
       const c = getCell(x, z);
       if (!c) { playSfx('bonk'); return false; }
       delete gs.cells[cellKey(x, z)];
@@ -1390,12 +1381,11 @@
       ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
       ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(ndc, cam);
-      // Walk sprites + homestead first (they sit above tiles)
+      // Walk sprites first (they sit above tiles)
       const objs = [];
       for (const k in cellMeshes) {
         const cm = cellMeshes[k];
         if (cm.sprite) objs.push(cm.sprite);
-        if (cm.homestead) objs.push(cm.homestead);
       }
       if (objs.length) {
         const sHits = raycaster.intersectObjects(objs, true);
@@ -1403,8 +1393,7 @@
           let g = sHits[0].object;
           while (g && g !== scene) {
             for (const k in cellMeshes) {
-              const cm = cellMeshes[k];
-              if (cm.sprite === g || cm.homestead === g) {
+              if (cellMeshes[k].sprite === g) {
                 const [x, z] = k.split(',').map(Number);
                 return { x, z };
               }
@@ -1641,7 +1630,6 @@
       const block = new Set(['water', 'house', 'tree', 'well', 'lantern', 'fence']);
       for (let x = 0; x < GRID; x++) {
         for (let z = 0; z < GRID; z++) {
-          if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue;
           const c = gs.cells[cellKey(x, z)];
           if (c && block.has(c.kind)) continue;
           candidates.push({ x, z });
@@ -1766,12 +1754,10 @@
           cm.decoration.rotation.z =
             Math.sin(swayT + cm.decoration.userData.swayPhase) * cm.decoration.userData.swayAmount;
         }
-        // smoke (per house sprite or homestead)
-        const smokeHost = (sp && sp.userData.smokes) ? sp
-          : (cm.homestead && cm.homestead.userData.smokes ? cm.homestead : null);
-        if (smokeHost && tickStarted) {
-          const ch = smokeHost.userData.chimney;
-          const sm = smokeHost.userData.smokes;
+        // smoke (any placed house sprite)
+        if (sp && sp.userData.smokes && tickStarted) {
+          const ch = sp.userData.chimney;
+          const sm = sp.userData.smokes;
           for (const puff of sm) {
             const tt = ((now / 2400) + puff.userData.t0) % 1;
             puff.position.x = ch.x + Math.sin(tt * 6 + (puff.userData.t0 * 6)) * 0.08;
@@ -1932,10 +1918,16 @@
       } catch { return null; }
     }
     function applySave(data) {
+      // Clear the default-init centerpiece before applying user's saved layout
+      const all = Object.keys(gs.cells);
+      for (const k of all) {
+        const [x, z] = k.split(',').map(Number);
+        delete gs.cells[k];
+        setSprite(x, z, null);
+      }
       for (const k in (data.cells || {})) {
         const sc = data.cells[k];
         const [x, z] = k.split(',').map(Number);
-        if (x === HOMESTEAD.x && z === HOMESTEAD.z) continue;
         gs.cells[k] = { kind: sc.kind, level: sc.level || 1, seed: sc.seed || 0 };
         setSprite(x, z, makeSprite(sc.kind, sc.level || 1, sc.seed || 0));
       }
@@ -1952,6 +1944,8 @@
     (function init() {
       const resumeIco = document.getElementById('resume-ico');
       if (resumeIco) resumeIco.innerHTML = ICONS.tree;
+      // Default scene: one little red cottage in the middle
+      placeInitialHomestead();
       const saved = readSave();
       const hasMeaningful = saved && Object.keys(saved.cells || {}).length > 0;
       renderDock();
