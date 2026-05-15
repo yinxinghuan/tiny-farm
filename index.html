@@ -79,11 +79,11 @@
   }
   #dock {
     display: flex;
-    gap: 2px;
+    gap: 0;
     background: var(--chip-bg);
     border: 1px solid var(--chip-border);
-    border-radius: 30px;
-    padding: 6px;
+    border-radius: 28px;
+    padding: 5px 4px;
     backdrop-filter: blur(22px) saturate(180%);
     -webkit-backdrop-filter: blur(22px) saturate(180%);
     box-shadow: var(--chip-shadow);
@@ -93,38 +93,39 @@
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
-    scroll-snap-type: x proximity;
+    /* Edge fade so the user sees the dock is scrollable */
+    mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
   }
   #dock::-webkit-scrollbar { display: none; }
-  .tool { scroll-snap-align: center; }
   .tool {
     flex: 0 0 auto;
-    width: 56px;
-    height: 54px;
-    border-radius: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
     background: transparent;
     border: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     cursor: pointer;
     transition: background 0.16s ease, transform 0.08s ease;
     position: relative;
   }
   .tool .glyph {
-    width: 26px; height: 26px;
+    width: 24px; height: 24px;
     display: flex; align-items: center; justify-content: center;
     color: var(--ink-soft);  /* default ink for currentColor icons */
     transition: color 0.16s ease;
   }
   .tool .glyph svg { width: 100%; height: 100%; display: block; }
   .tool .lbl {
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     color: var(--ink-mute);
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     line-height: 1;
     transition: color 0.16s ease;
@@ -153,6 +154,44 @@
   .tool[data-tool="water"]     .glyph { color: #4a90b8; }
   .tool[data-tool="erase"]     .glyph { color: #8a6a4a; }
   .tool.selected .glyph { filter: brightness(0.78); }
+
+  /* Weather picker (top-right) */
+  #weather {
+    position: absolute;
+    top: max(14px, env(safe-area-inset-top));
+    right: 14px;
+    z-index: 20;
+    display: flex;
+    gap: 2px;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
+    border-radius: 22px;
+    padding: 4px;
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    box-shadow: var(--chip-shadow);
+    pointer-events: auto;
+  }
+  #weather button {
+    width: 34px; height: 34px;
+    border: none;
+    background: transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+    transition: background 0.16s ease, color 0.16s ease, transform 0.08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #weather button svg { width: 18px; height: 18px; display: block; }
+  #weather button:active { transform: scale(0.92); }
+  #weather button.active {
+    background: var(--chip-bg-hot);
+    color: var(--ink);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 1px 2px rgba(20, 30, 50, 0.05);
+  }
 
   /* Watermark */
   #watermark {
@@ -271,6 +310,13 @@
   <canvas id="canvas"></canvas>
 
   <div id="hint">pick a tool below, then tap a tile</div>
+  <div id="weather">
+    <button data-mode="auto"  aria-label="Auto"></button>
+    <button data-mode="dawn"  aria-label="Dawn"></button>
+    <button data-mode="day"   aria-label="Day"></button>
+    <button data-mode="dusk"  aria-label="Sunset"></button>
+    <button data-mode="night" aria-label="Night"></button>
+  </div>
 
   <img id="watermark" src="img/aigram.svg" alt="">
 
@@ -452,8 +498,9 @@
     // ─────────────────────────────────────────────────────────────
     // TIME-OF-DAY (auto cycle)
     // ─────────────────────────────────────────────────────────────
-    let todMinutes = 540; // start at 9AM
-    const TOD_CYCLE_MS = 300000; // 5 real minutes = 24 game hours
+    // Random start somewhere between 7AM and 8PM so repeated loads land in different lighting
+    let todMinutes = 420 + Math.random() * 780;
+    const TOD_CYCLE_MS = 180000; // 3 real minutes = 24 game hours
     let lastTodAdvance = performance.now();
 
     const TOD_ANCHORS = [
@@ -516,6 +563,40 @@
       } catch {}
     }
     applyTod();
+
+    // ─────────────────────────────────────────────────────────────
+    // WEATHER PICKER (manual TOD override)
+    // ─────────────────────────────────────────────────────────────
+    const WEATHER_ICONS = {
+      auto:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 8 A8 8 0 1 0 21 12"/><polyline points="20 4 20 9 15 9"/></svg>',
+      dawn:  '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="14" r="4"/><path d="M3 18 L21 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M12 7 L12 4 M6 9 L5 8 M18 9 L19 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      day:   '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4.4"/><path d="M12 3 L12 5 M12 19 L12 21 M3 12 L5 12 M19 12 L21 12 M5.6 5.6 L7 7 M17 17 L18.4 18.4 M5.6 18.4 L7 17 M17 7 L18.4 5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      dusk:  '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="15" r="3.6"/><path d="M3 19 L21 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M9 8 L12 4 L15 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      night: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 13.5 A8 8 0 1 1 11.5 4 a6 6 0 0 0 8.5 9.5 z"/></svg>',
+    };
+    const TOD_PRESETS = { dawn: 420, day: 780, dusk: 1170, night: 1380 };
+
+    let weatherMode = 'auto';
+    function setWeather(mode) {
+      weatherMode = mode;
+      if (mode !== 'auto' && TOD_PRESETS[mode] !== undefined) {
+        todMinutes = TOD_PRESETS[mode];
+        applyTod();
+      }
+      document.querySelectorAll('#weather button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+    }
+    // Populate icons + wire up tap handlers
+    document.querySelectorAll('#weather button').forEach(b => {
+      b.innerHTML = WEATHER_ICONS[b.dataset.mode] || '';
+      b.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        kickStart();
+        setWeather(b.dataset.mode);
+      });
+    });
+    setWeather('auto');
 
     // ─────────────────────────────────────────────────────────────
     // CLOUDS (low-poly, drifting, cast shadows on the island)
@@ -1617,10 +1698,12 @@
         for (const a of animals) updateAnimal(a, now, dt);
       }
 
-      // Time-of-day advance (always — bounded loop, fine for preload)
+      // Time-of-day: advance only in auto mode (manual modes stay frozen)
       const todElapsedMs = now - lastTodAdvance;
       lastTodAdvance = now;
-      todMinutes = (todMinutes + (todElapsedMs / TOD_CYCLE_MS) * 1440) % 1440;
+      if (weatherMode === 'auto') {
+        todMinutes = (todMinutes + (todElapsedMs / TOD_CYCLE_MS) * 1440) % 1440;
+      }
       applyTod();
 
       // Clouds drift; wrap around
