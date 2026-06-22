@@ -1,9 +1,8 @@
 {
   "name": "tiny-farm",
-  "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "python3 -m http.server 8080",
-    "build": "node -e \"require('fs').existsSync('index.html') && require('fs').existsSync('meta.json') || process.exit(1)\""
-  }
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "devDependencies": { "vite": "^5.1.0" }
 }
